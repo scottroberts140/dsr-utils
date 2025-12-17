@@ -1,0 +1,10 @@
+pyproject.toml
+src/dsr_utils/__init__.py
+src/dsr_utils/formatting.py
+src/dsr_utils/strings.py
+src/dsr_utils/types.py
+src/dsr_utils.egg-info/PKG-INFO
+src/dsr_utils.egg-info/SOURCES.txt
+src/dsr_utils.egg-info/dependency_links.txt
+src/dsr_utils.egg-info/requires.txt
+src/dsr_utils.egg-info/top_level.txt

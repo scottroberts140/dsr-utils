@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dsr-utils"
+version = "0.0.1"
+description = "Generic utility functions for text formatting, string operations, and type conversions."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Scott Roberts", email="scottrdeveloper@gmail.com"}
+]
+keywords = ["utilities", "formatting", "strings", "types"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "numpy>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+]
+
+[tool.setuptools]
+packages = ["dsr_utils"]
+
+[tool.setuptools.package-dir]
+"" = "src"
