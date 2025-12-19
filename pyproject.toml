@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dsr-utils"
-version = "0.0.1"
+version = "0.0.2"
 description = "Generic utility functions for text formatting, string operations, and type conversions."
 readme = "README.md"
 requires-python = ">=3.10"
