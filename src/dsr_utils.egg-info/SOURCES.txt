@@ -1,3 +1,5 @@
+LICENSE
+README.md
 pyproject.toml
 src/dsr_utils/__init__.py
 src/dsr_utils/formatting.py
