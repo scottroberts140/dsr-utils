@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: dsr-utils
-Version: 0.0.2
+Version: 0.0.3
 Summary: Generic utility functions for text formatting, string operations, and type conversions.
 Author-email: Scott Roberts <scottrdeveloper@gmail.com>
 License: MIT
