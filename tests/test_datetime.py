@@ -105,6 +105,7 @@ class TestToDatetime:
         """Test that invalid string is coerced to NaT with COERCE mode."""
         result = to_datetime("not-a-date", errors=DatetimeErrors.COERCE)
         # NaT is not an instance of Timestamp, so just check it's NaT
+        assert not isinstance(result, pd.Series)
         assert pd.isna(result)
 
     def test_series_with_invalid_coerce(self):
