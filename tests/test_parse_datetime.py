@@ -16,13 +16,15 @@ class TestParseDatetime:
     def test_parse_timestamp_basic_date(self):
         """Test parsing basic date properties from Timestamp."""
         ts = pd.Timestamp("2025-12-22")
-        result = parse_datetime(ts, DatetimeProperty.YEAR | DatetimeProperty.MONTH | DatetimeProperty.DAY)
+        result = parse_datetime(
+            ts, DatetimeProperty.YEAR | DatetimeProperty.MONTH | DatetimeProperty.DAY)
         assert result == {"year": 2025, "month": 12, "day": 22}
 
     def test_parse_timestamp_time_properties(self):
         """Test parsing time properties."""
         ts = pd.Timestamp("2025-12-22 14:30:45")
-        result = parse_datetime(ts, DatetimeProperty.HOUR | DatetimeProperty.MINUTE | DatetimeProperty.SECOND)
+        result = parse_datetime(
+            ts, DatetimeProperty.HOUR | DatetimeProperty.MINUTE | DatetimeProperty.SECOND)
         assert result == {"hour": 14, "minute": 30, "second": 45}
 
     def test_parse_timestamp_dayofweek(self):
@@ -38,17 +40,22 @@ class TestParseDatetime:
         saturday = pd.Timestamp("2025-12-27")  # Saturday
         sunday = pd.Timestamp("2025-12-28")  # Sunday
 
-        assert parse_datetime(monday, DatetimeProperty.IS_WEEKEND)["is_weekend"] is False
-        assert parse_datetime(saturday, DatetimeProperty.IS_WEEKEND)["is_weekend"] is True
-        assert parse_datetime(sunday, DatetimeProperty.IS_WEEKEND)["is_weekend"] is True
+        assert parse_datetime(monday, DatetimeProperty.IS_WEEKEND)[
+            "is_weekend"] is False
+        assert parse_datetime(saturday, DatetimeProperty.IS_WEEKEND)[
+            "is_weekend"] is True
+        assert parse_datetime(sunday, DatetimeProperty.IS_WEEKEND)[
+            "is_weekend"] is True
 
     def test_parse_timestamp_leap_year(self):
         """Test IS_LEAP_YEAR property."""
         leap = pd.Timestamp("2024-02-29")  # Leap year
         non_leap = pd.Timestamp("2025-12-22")  # Non-leap year
 
-        assert parse_datetime(leap, DatetimeProperty.IS_LEAP_YEAR)["is_leap_year"] is True
-        assert parse_datetime(non_leap, DatetimeProperty.IS_LEAP_YEAR)["is_leap_year"] is False
+        assert parse_datetime(leap, DatetimeProperty.IS_LEAP_YEAR)[
+            "is_leap_year"] is True
+        assert parse_datetime(non_leap, DatetimeProperty.IS_LEAP_YEAR)[
+            "is_leap_year"] is False
 
     def test_parse_timestamp_quarter(self):
         """Test QUARTER property."""
@@ -68,15 +75,20 @@ class TestParseDatetime:
         end = pd.Timestamp("2025-12-31")
         middle = pd.Timestamp("2025-12-15")
 
-        assert parse_datetime(start, DatetimeProperty.IS_MONTH_START)["is_month_start"] is True
-        assert parse_datetime(end, DatetimeProperty.IS_MONTH_END)["is_month_end"] is True
-        assert parse_datetime(middle, DatetimeProperty.IS_MONTH_START)["is_month_start"] is False
-        assert parse_datetime(middle, DatetimeProperty.IS_MONTH_END)["is_month_end"] is False
+        assert parse_datetime(start, DatetimeProperty.IS_MONTH_START)[
+            "is_month_start"] is True
+        assert parse_datetime(end, DatetimeProperty.IS_MONTH_END)[
+            "is_month_end"] is True
+        assert parse_datetime(middle, DatetimeProperty.IS_MONTH_START)[
+            "is_month_start"] is False
+        assert parse_datetime(middle, DatetimeProperty.IS_MONTH_END)[
+            "is_month_end"] is False
 
     def test_parse_timestamp_names(self):
         """Test DAY_NAME and MONTH_NAME."""
         ts = pd.Timestamp("2025-12-22")  # Monday, December
-        result = parse_datetime(ts, DatetimeProperty.DAY_NAME | DatetimeProperty.MONTH_NAME)
+        result = parse_datetime(
+            ts, DatetimeProperty.DAY_NAME | DatetimeProperty.MONTH_NAME)
         assert result["day_name"] == "Monday"
         assert result["month_name"] == "December"
 
@@ -137,7 +149,8 @@ class TestParseDatetimeSeries:
     def test_parse_series_preserves_index(self):
         """Test that Series index is preserved in output."""
         series = pd.Series(
-            [pd.Timestamp("2025-12-22"), pd.Timestamp("2025-12-23"), pd.Timestamp("2025-12-24")],
+            [pd.Timestamp("2025-12-22"), pd.Timestamp("2025-12-23"),
+             pd.Timestamp("2025-12-24")],
             index=["row1", "row2", "row3"],
         )
         result = parse_datetime_series(series, DatetimeProperty.DAY)
@@ -191,7 +204,8 @@ class TestParseDatetimeSeries:
             ],
             index=["midnight", "noon", "evening"],
         )
-        result = parse_datetime_series(series, DatetimeProperty.SIN_HOUR | DatetimeProperty.COS_HOUR)
+        result = parse_datetime_series(
+            series, DatetimeProperty.SIN_HOUR | DatetimeProperty.COS_HOUR)
 
         # Midnight (0h): sin(0) = 0, cos(0) = 1
         assert abs(result["midnight"]["sin_hour"] - 0.0) < 1e-10
@@ -223,7 +237,8 @@ class TestParseDatetimeSeries:
     def test_parse_series_multiple_properties(self):
         """Test parsing multiple properties from Series."""
         series = pd.Series(
-            [pd.Timestamp("2025-12-22 14:30:45"), pd.Timestamp("2025-12-23 09:15:30")],
+            [pd.Timestamp("2025-12-22 14:30:45"),
+             pd.Timestamp("2025-12-23 09:15:30")],
             index=["ts1", "ts2"],
         )
         result = parse_datetime_series(

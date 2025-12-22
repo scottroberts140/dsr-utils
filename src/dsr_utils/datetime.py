@@ -80,6 +80,7 @@ def to_datetime(
 
     return result
 
+
 def parse_datetime(
     value: pd.Timestamp,
     properties: DatetimeProperty = DatetimeProperty.YEAR
@@ -245,17 +246,16 @@ def parse_datetime_series(
     if DatetimeProperty.COS_HOUR in properties:
         extracted["cos_hour"] = np.cos(2 * np.pi * series.dt.hour / 24)
     if DatetimeProperty.SIN_DAYOFWEEK in properties:
-        extracted["sin_dayofweek"] = np.sin(2 * np.pi * series.dt.dayofweek / 7)
+        extracted["sin_dayofweek"] = np.sin(
+            2 * np.pi * series.dt.dayofweek / 7)
     if DatetimeProperty.COS_DAYOFWEEK in properties:
-        extracted["cos_dayofweek"] = np.cos(2 * np.pi * series.dt.dayofweek / 7)
+        extracted["cos_dayofweek"] = np.cos(
+            2 * np.pi * series.dt.dayofweek / 7)
     if DatetimeProperty.SIN_MONTH in properties:
         extracted["sin_month"] = np.sin(2 * np.pi * series.dt.month / 12)
     if DatetimeProperty.COS_MONTH in properties:
         extracted["cos_month"] = np.cos(2 * np.pi * series.dt.month / 12)
 
-    # Convert extracted series to nested dictionary with index as outer key
-    result = {}
-    for idx in series.index:
-        result[idx] = {key: values.loc[idx] for key, values in extracted.items()}
-
-    return result
+    # Convert the dictionary of Series into a DataFrame, then export to dict
+    # This is vastly more efficient than iterating through index (O(n) vs O(n²))
+    return pd.DataFrame(extracted).to_dict(orient='index')
