@@ -1,25 +1,10 @@
 """Datetime conversion utilities with pandas integration."""
 
-from enum import Enum
 from typing import Any
 
 import pandas as pd
 
-
-class DatetimeResolution(str, Enum):
-    """Datetime resolution for pandas datetime64 types."""
-
-    SECOND = "s"
-    MILLISECOND = "ms"
-    MICROSECOND = "us"
-    NANOSECOND = "ns"
-
-
-class DatetimeErrors(str, Enum):
-    """Error handling strategies for datetime conversion."""
-
-    RAISE = "raise"
-    COERCE = "coerce"
+from dsr_utils.enums import DatetimeErrors, DatetimeResolution
 
 
 def to_datetime(

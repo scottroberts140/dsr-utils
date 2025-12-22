@@ -3,7 +3,8 @@
 import pandas as pd
 import pytest
 
-from dsr_utils.datetime import DatetimeErrors, DatetimeResolution, to_datetime
+from dsr_utils.datetime import to_datetime
+from dsr_utils.enums import DatetimeErrors, DatetimeResolution
 
 
 class TestToDatetime:
@@ -70,13 +71,14 @@ class TestToDatetime:
         original = pd.Timestamp("2025-12-22")
         result = to_datetime(original)
         assert result is original
-        assert result == original
+        assert result == original  # type: ignore[comparison-overlap]
 
     def test_preserve_existing_datetime_series(self):
         """Test that existing datetime Series is preserved when no unit specified."""
         original = pd.Series(pd.to_datetime(["2025-12-22", "2025-12-23"]))
         result = to_datetime(original)
         assert result is original
+        assert isinstance(result, pd.Series)
         pd.testing.assert_series_equal(result, original)
 
     def test_convert_existing_timestamp_with_unit(self):
@@ -102,6 +104,7 @@ class TestToDatetime:
     def test_invalid_string_coerces_to_nat(self):
         """Test that invalid string is coerced to NaT with COERCE mode."""
         result = to_datetime("not-a-date", errors=DatetimeErrors.COERCE)
+        # NaT is not an instance of Timestamp, so just check it's NaT
         assert pd.isna(result)
 
     def test_series_with_invalid_coerce(self):
