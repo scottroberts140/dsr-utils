@@ -259,3 +259,30 @@ def parse_datetime_series(
     # Convert the dictionary of Series into a DataFrame, then export to dict
     # This is vastly more efficient than iterating through index (O(n) vs O(n²))
     return pd.DataFrame(extracted).to_dict(orient='index')
+
+
+def is_string_datetime(series: pd.Series, sample_size: int = 500) -> bool:
+    """Efficiently detect if a string series contains datetime data.
+
+    - Only checks object-dtype (string-like) series
+    - Drops NA values and samples up to `sample_size`
+    - Parses sample via `pd.to_datetime(errors='coerce', cache=True, infer_datetime_format=True)`
+    - Returns True if >95% of non-null sample values parse successfully
+
+    This is intended for heuristic detection and favors speed over strictness.
+    """
+    # Only check 'object' (string-like) columns
+    if not pd.api.types.is_object_dtype(series):
+        return False
+
+    # Drop NAs and sample
+    sample = series.dropna().head(sample_size)
+    if sample.empty:
+        return False
+
+    try:
+        parsed = pd.to_datetime(sample, errors='coerce', cache=True, infer_datetime_format=True)
+        # If more than 95% of non-nulls parsed, it's likely datetime
+        return float(parsed.notnull().mean()) > 0.95
+    except Exception:
+        return False

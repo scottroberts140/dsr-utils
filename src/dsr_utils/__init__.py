@@ -3,6 +3,7 @@ dsr_utils: Generic utility functions for text, strings, and types.
 """
 
 from dsr_utils.datetime import parse_datetime, parse_datetime_series, to_datetime
+from dsr_utils.datetime import is_string_datetime
 from dsr_utils.enums import DatetimeErrors, DatetimeProperty, DatetimeResolution
 from dsr_utils.formatting import TextAlignment, format_text
 from dsr_utils.strings import is_float_string
@@ -18,6 +19,7 @@ __all__ = [
     "is_float_string",
     "parse_datetime",
     "parse_datetime_series",
+    "is_string_datetime",
     "to_datetime",
 ]
 

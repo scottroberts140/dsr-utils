@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from dsr_utils.datetime import to_datetime
+from dsr_utils.datetime import to_datetime, is_string_datetime
 from dsr_utils.enums import DatetimeErrors, DatetimeResolution
 
 
@@ -152,3 +152,48 @@ class TestToDatetime:
         assert DatetimeResolution.NANOSECOND.value == "ns"
         assert DatetimeErrors.RAISE.value == "raise"
         assert DatetimeErrors.COERCE.value == "coerce"
+
+
+class TestIsStringDatetime:
+    def test_detects_datetime_strings(self):
+        series = pd.Series([
+            "2025-12-22",
+            "2024-01-01",
+            "2023-07-04",
+            "1999-12-31",
+            "2020-02-29",
+        ])
+        assert is_string_datetime(series) is True
+
+    def test_non_object_dtype_returns_false(self):
+        series = pd.Series(pd.to_datetime([
+            "2025-12-22",
+            "2024-01-01",
+        ]))
+        assert is_string_datetime(series) is False
+
+    def test_random_strings_return_false(self):
+        series = pd.Series([
+            "apple",
+            "banana",
+            "carrot",
+            "delta",
+            "echo",
+        ])
+        assert is_string_datetime(series) is False
+
+    def test_mixed_strings_threshold(self):
+        # 19 valid, 1 invalid -> 95% valid; threshold is > 0.95, so False
+        valid_dates = [f"2025-01-{day:02d}" for day in range(1, 20)]
+        series = pd.Series(valid_dates + ["not-a-date"])  # 20 total
+        assert is_string_datetime(series) is False
+
+    def test_ignores_nas_and_empty(self):
+        # With NAs removed, remaining are valid dates
+        series = pd.Series([None, "2025-01-01", None, "2025-01-02", None])
+        assert is_string_datetime(series) is True
+
+    def test_respects_sample_size(self):
+        # Ensure sampling doesn't break detection
+        series = pd.Series([f"2025-03-{day:02d}" for day in range(1, 1000)])
+        assert is_string_datetime(series, sample_size=10) is True
