@@ -159,9 +159,9 @@ def parse_datetime(
     if DatetimeProperty.COS_DAYOFWEEK in properties:
         result["cos_dayofweek"] = math.cos(2 * math.pi * value.dayofweek / 7)
     if DatetimeProperty.SIN_MONTH in properties:
-        result["sin_month"] = math.sin(2 * math.pi * value.month / 12)
+        result["sin_month"] = math.sin(2 * math.pi * (value.month - 1) / 12)
     if DatetimeProperty.COS_MONTH in properties:
-        result["cos_month"] = math.cos(2 * math.pi * value.month / 12)
+        result["cos_month"] = math.cos(2 * math.pi * (value.month - 1) / 12)
 
     return result
 
@@ -252,9 +252,9 @@ def parse_datetime_series(
         extracted["cos_dayofweek"] = np.cos(
             2 * np.pi * series.dt.dayofweek / 7)
     if DatetimeProperty.SIN_MONTH in properties:
-        extracted["sin_month"] = np.sin(2 * np.pi * series.dt.month / 12)
+        extracted["sin_month"] = np.sin(2 * np.pi * (series.dt.month - 1) / 12)
     if DatetimeProperty.COS_MONTH in properties:
-        extracted["cos_month"] = np.cos(2 * np.pi * series.dt.month / 12)
+        extracted["cos_month"] = np.cos(2 * np.pi * (series.dt.month - 1) / 12)
 
     # Convert the dictionary of Series into a DataFrame, then export to dict
     # This is vastly more efficient than iterating through index (O(n) vs O(n²))

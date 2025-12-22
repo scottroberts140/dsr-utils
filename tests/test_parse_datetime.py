@@ -107,9 +107,11 @@ class TestParseDatetime:
         assert abs(result["sin_hour"] - 0.0) < 1e-10
         assert abs(result["cos_hour"] - (-1.0)) < 1e-10
 
-        # At month 12: sin(2π * 12/12) = sin(2π) = 0, cos(2π) = 1
-        assert abs(result["sin_month"] - 0.0) < 1e-10
-        assert abs(result["cos_month"] - 1.0) < 1e-10
+        # Month cyclical uses 0-based (month-1):
+        # At month 12 -> angle = 2π * (11/12) = 330°
+        # sin = -0.5, cos ≈ 0.8660254037844386
+        assert abs(result["sin_month"] - (-0.5)) < 1e-10
+        assert abs(result["cos_month"] - 0.8660254037844386) < 1e-10
 
     def test_parse_timestamp_multiple_properties(self):
         """Test parsing multiple properties at once."""
