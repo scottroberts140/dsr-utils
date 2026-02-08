@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from dsr_utils.datetime import to_datetime, is_string_datetime
+from dsr_utils.datetime import to_datetime, is_string_datetime, infer_string_datetime_format
 from dsr_utils.enums import DatetimeErrors, DatetimeResolution
 
 
@@ -197,3 +197,20 @@ class TestIsStringDatetime:
         # Ensure sampling doesn't break detection
         series = pd.Series([f"2025-03-{day:02d}" for day in range(1, 1000)])
         assert is_string_datetime(series, sample_size=10) is True
+
+    def test_infer_string_datetime_format_date_only(self):
+        series = pd.Series(["2025-12-22", "2024-07-01", "1999-01-31"])
+        fmt = infer_string_datetime_format(series)
+        assert fmt == "%Y-%m-%d"
+
+    def test_infer_string_datetime_format_datetime(self):
+        series = pd.Series(
+            ["2025-12-22 14:30:45", "2024-07-01 00:00:00", "1999-01-31 23:59:59"])
+        fmt = infer_string_datetime_format(series)
+        assert fmt == "%Y-%m-%d %H:%M:%S"
+
+    def test_infer_string_datetime_format_none_for_mixed(self):
+        series = pd.Series(["2025-12-22", "07/01/2024",
+                           "not-a-date"])  # mixed formats
+        fmt = infer_string_datetime_format(series, min_success=0.99)
+        assert fmt is None

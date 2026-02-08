@@ -1,3 +1,7 @@
+from dsr_utils.enums import StringCase
+from typing import Callable
+
+
 def is_float_string(value) -> bool:
     """Check if a value can be converted to a float.
 
@@ -43,17 +47,17 @@ def _normalize_separators(name: str) -> str:
     import re
 
     # Replace hyphens and spaces with underscores
-    name = name.replace('-', '_').replace(' ', '_')
+    name = name.replace("-", "_").replace(" ", "_")
 
     # Insert underscore before uppercase letters (for camelCase and PascalCase)
     # But avoid multiple underscores and handle consecutive capitals
-    name = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', name)
+    name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
 
     # Remove any duplicate underscores
-    name = re.sub(r'_+', '_', name)
+    name = re.sub(r"_+", "_", name)
 
     # Strip leading/trailing underscores
-    name = name.strip('_')
+    name = name.strip("_")
 
     return name
 
@@ -61,7 +65,7 @@ def _normalize_separators(name: str) -> str:
 def to_snake_case(name: str) -> str:
     """Convert a string to snake_case format.
 
-    Handles various input formats including PascalCase, camelCase, spaces, 
+    Handles various input formats including PascalCase, camelCase, spaces,
     hyphens, and mixed separators.
 
     Args:
@@ -86,7 +90,7 @@ def to_snake_case(name: str) -> str:
 def to_pascal_case(name: str) -> str:
     """Convert a string to PascalCase format.
 
-    Handles various input formats including snake_case, camelCase, spaces, 
+    Handles various input formats including snake_case, camelCase, spaces,
     hyphens, and mixed separators.
 
     Args:
@@ -108,13 +112,13 @@ def to_pascal_case(name: str) -> str:
     # Normalize to have underscores as separators
     normalized = _normalize_separators(name)
     # Split on underscores and capitalize each part
-    return ''.join(word.capitalize() for word in normalized.split('_'))
+    return "".join(word.capitalize() for word in normalized.split("_"))
 
 
 def to_camel_case(name: str) -> str:
     """Convert a string to camelCase format.
 
-    Handles various input formats including snake_case, PascalCase, spaces, 
+    Handles various input formats including snake_case, PascalCase, spaces,
     hyphens, and mixed separators.
 
     Args:
@@ -136,15 +140,15 @@ def to_camel_case(name: str) -> str:
     # Normalize to have underscores as separators
     normalized = _normalize_separators(name)
     # Split on underscores
-    parts = normalized.split('_')
+    parts = normalized.split("_")
     # First part lowercase, rest capitalized
-    return parts[0].lower() + ''.join(word.capitalize() for word in parts[1:])
+    return parts[0].lower() + "".join(word.capitalize() for word in parts[1:])
 
 
 def to_kebab_case(name: str) -> str:
     """Convert a string to kebab-case format.
 
-    Handles various input formats including snake_case, camelCase, PascalCase, 
+    Handles various input formats including snake_case, camelCase, PascalCase,
     spaces, and mixed separators.
 
     Args:
@@ -166,13 +170,13 @@ def to_kebab_case(name: str) -> str:
     # Normalize to have underscores as separators
     normalized = _normalize_separators(name)
     # Convert to lowercase and replace underscores with hyphens
-    return normalized.lower().replace('_', '-')
+    return normalized.lower().replace("_", "-")
 
 
 def to_constant_case(name: str) -> str:
     """Convert a string to CONSTANT_CASE format.
 
-    Handles various input formats including snake_case, camelCase, PascalCase, 
+    Handles various input formats including snake_case, camelCase, PascalCase,
     spaces, hyphens, and mixed separators.
 
     Args:
@@ -195,3 +199,54 @@ def to_constant_case(name: str) -> str:
     normalized = _normalize_separators(name)
     # Convert to uppercase
     return normalized.upper()
+
+
+def to_original_string(str: str) -> str:
+    return str
+
+
+def func_for_string_conv(string_case: StringCase) -> Callable[[str], str]:
+    match string_case:
+        case StringCase.SNAKE:
+            convert_func = to_snake_case
+        case StringCase.PASCAL:
+            convert_func = to_pascal_case
+        case StringCase.CAMEL:
+            convert_func = to_camel_case
+        case StringCase.KEBAB:
+            convert_func = to_kebab_case
+        case StringCase.CONSTANT:
+            convert_func = to_constant_case
+        case _:
+            convert_func = to_original_string
+
+    return convert_func
+
+
+def convert_keys_to_case(input_dict: dict, string_case: StringCase) -> dict:
+    dict_copy = input_dict.copy()
+    convert_func = func_for_string_conv(string_case)
+
+    def convert_keys_to_case_using_func(input_dict: dict):
+        for k, v in input_dict.items():
+            convert_func(k)
+
+            if isinstance(v, dict):
+                convert_keys_to_case_using_func(v)
+
+    convert_keys_to_case_using_func(dict_copy)
+    return dict_copy
+
+
+def convert_list_to_case(input: list, string_case: StringCase) -> list:
+    convert_func = func_for_string_conv(string_case)
+    return [convert_func(s) for s in input]
+
+
+def convert_str_to_case(input: str, string_case: StringCase) -> str:
+    convert_func = func_for_string_conv(string_case)
+    return convert_func(input)
+
+
+def apply_tracking(text: str) -> str:
+    return " ".join(list(text))

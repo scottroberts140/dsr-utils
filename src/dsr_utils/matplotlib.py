@@ -1,0 +1,32 @@
+from typing import Union, TYPE_CHECKING
+from matplotlib.artist import Artist
+from matplotlib.figure import Figure
+from matplotlib.transforms import Bbox
+from matplotlib.axes import Axes
+
+if TYPE_CHECKING:
+    from matplotlib.backend_bases import RendererBase
+
+
+def get_artist_bbox(
+    obj: Artist, transform_to: Union[Figure, Axes], renderer: "RendererBase"
+) -> Bbox:
+    fig = obj.get_figure()
+
+    if fig is None:
+        raise ValueError("Artist must be attached to a figure to measure Bbox.")
+
+    bbox_px = obj.get_window_extent(renderer=renderer)
+
+    if hasattr(transform_to, "transAxes"):
+        inv = transform_to.transAxes.inverted()  # type: ignore
+    else:
+        inv = transform_to.transFigure.inverted()  # type: ignore
+
+    return bbox_px.transformed(inv)
+
+
+def get_axis_bbox(ax: Axes, renderer: "RendererBase") -> Bbox:
+    bbox_px = ax.get_window_extent(renderer=renderer)
+    inv = ax.transAxes.inverted()
+    return bbox_px.transformed(inv)
