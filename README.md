@@ -1,8 +1,8 @@
 # dsr-utils
 
-[![PyPI version](https://img.shields.io/pypi/v/dsr-utils.svg)](https://pypi.org/project/dsr-utils/)
-[![Python versions](https://img.shields.io/pypi/pyversions/dsr-utils.svg)](https://pypi.org/project/dsr-utils/)
-[![License](https://img.shields.io/pypi/l/dsr-utils.svg)](https://pypi.org/project/dsr-utils/)
+[![PyPI version](https://img.shields.io/pypi/v/dsr-utils.svg?cacheSeconds=300)](https://pypi.org/project/dsr-utils/)
+[![Python versions](https://img.shields.io/pypi/pyversions/dsr-utils.svg?cacheSeconds=300)](https://pypi.org/project/dsr-utils/)
+[![License](https://img.shields.io/pypi/l/dsr-utils.svg?cacheSeconds=300)](https://pypi.org/project/dsr-utils/)
 [![Changelog](https://img.shields.io/badge/changelog-available-blue.svg)](https://github.com/scottroberts140/dsr-utils/releases)
 
 Utility functions and helpers for common data science tasks, including datetime parsing, formatting, tables, and plotting helpers.
