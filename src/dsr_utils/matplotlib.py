@@ -1,3 +1,5 @@
+"""Matplotlib helpers for computing artist and axis bounding boxes."""
+
 from typing import Union, TYPE_CHECKING
 from matplotlib.artist import Artist
 from matplotlib.figure import Figure
@@ -11,6 +13,16 @@ if TYPE_CHECKING:
 def get_artist_bbox(
     obj: Artist, transform_to: Union[Figure, Axes], renderer: "RendererBase"
 ) -> Bbox:
+    """Return an artist's bounding box in axes or figure coordinates.
+
+    Args:
+        obj: Matplotlib artist to measure.
+        transform_to: Target coordinate space (Figure or Axes).
+        renderer: Active renderer used for measurement.
+
+    Returns:
+        Bounding box in the target coordinate system.
+    """
     fig = obj.get_figure()
 
     if fig is None:
@@ -27,6 +39,15 @@ def get_artist_bbox(
 
 
 def get_axis_bbox(ax: Axes, renderer: "RendererBase") -> Bbox:
+    """Return an axis' bounding box in axes coordinates.
+
+    Args:
+        ax: Target axis.
+        renderer: Active renderer used for measurement.
+
+    Returns:
+        Bounding box in axes coordinates.
+    """
     bbox_px = ax.get_window_extent(renderer=renderer)
     inv = ax.transAxes.inverted()
     return bbox_px.transformed(inv)

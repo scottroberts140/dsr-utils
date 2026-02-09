@@ -1,3 +1,5 @@
+"""Type conversion helpers for common data inputs."""
+
 import numpy as np
 from typing import Any
 
@@ -36,5 +38,5 @@ def any_to_list(a: Any) -> list[Any]:
         case dict():
             return list(a.values())
         case _:
-            print(f'Unrecognized data type: {type(a)}')
+            print(f"Unrecognized data type: {type(a)}")
             return []

@@ -1,3 +1,5 @@
+"""Formatting helpers for numbers, dates, enums, and table-friendly output."""
+
 from __future__ import annotations
 from enum import Enum, auto
 from typing import Any, Sequence, Union, Optional, TypeVar
@@ -28,6 +30,12 @@ class TextAlignment(Enum):
     RIGHT = (3,)
 
     def formatting_symbol(self) -> str:
+        """Return the format spec alignment symbol for this alignment.
+
+        Example:
+            >>> TextAlignment.RIGHT.formatting_symbol()
+            '>'
+        """
         match self:
             case TextAlignment.LEFT:
                 alignment_symbol = "<"
@@ -41,6 +49,12 @@ class TextAlignment(Enum):
         return alignment_symbol
 
     def matplot_alignment(self) -> str:
+        """Return the matplotlib text alignment string.
+
+        Example:
+            >>> TextAlignment.CENTER.matplot_alignment()
+            'center'
+        """
         match self:
             case TextAlignment.LEFT:
                 matplot_alignment = "left"
@@ -55,6 +69,8 @@ class TextAlignment(Enum):
 
 
 class FormatType(Enum):
+    """Supported formatting categories for `FormatConfig` subclasses."""
+
     INTEGER = auto()
     FLOAT = auto()
     CURRENCY = auto()
@@ -68,11 +84,15 @@ class FormatType(Enum):
 
 
 class CurrencySymbolPosition(Enum):
+    """Placement of the currency symbol relative to the numeric value."""
+
     LEFT = auto()
     RIGHT = auto()
 
 
 class NumericScale(Enum):
+    """Numeric scaling options (none, automatic, or fixed K/M/B)."""
+
     NONE = auto()
     AUTO = auto()  # Choose automatically, based on magnitude
     K = auto()  # Thousands
@@ -80,6 +100,12 @@ class NumericScale(Enum):
     B = auto()  # Billions
 
     def get_size(self) -> float:
+        """Return the scale factor for this numeric scale.
+
+        Example:
+            >>> NumericScale.M.get_size()
+            1000000
+        """
         match self:
             case self.NONE:
                 return 1
@@ -95,6 +121,12 @@ class NumericScale(Enum):
                 return 1
 
     def get_scaled_value(self, val: float) -> float:
+        """Scale a value according to the selected numeric scale.
+
+        Example:
+            >>> NumericScale.K.get_scaled_value(12345)
+            12.345
+        """
         match self:
             case self.NONE:
                 return val
@@ -121,6 +153,14 @@ class NumericScale(Enum):
                 return val / self.get_size()
 
     def get_descriptor(self, val: Optional[float] = None) -> str:
+        """Return the scale suffix for this numeric scale.
+
+        For AUTO, `val` is required to determine the suffix.
+
+        Example:
+            >>> NumericScale.AUTO.get_descriptor(2_500_000)
+            'M'
+        """
         match self:
             case self.NONE:
                 return ""
@@ -152,6 +192,8 @@ class NumericScale(Enum):
 
 
 class DataScale(Enum):
+    """Data size scaling options (bytes through terabytes)."""
+
     NONE = auto()
     AUTO = auto()  # Choose automatically, based on magnitude
     B = auto()  # Bytes
@@ -161,6 +203,12 @@ class DataScale(Enum):
     TB = auto()  # Terabytes
 
     def get_size(self) -> float:
+        """Return the scale factor in bytes for this data scale.
+
+        Example:
+            >>> DataScale.GB.get_size()
+            1073741824
+        """
         match self:
             case self.NONE | self.B:
                 return 1
@@ -178,6 +226,12 @@ class DataScale(Enum):
                 return 1
 
     def get_scaled_value(self, val: float) -> float:
+        """Scale a value (bytes) according to the selected data scale.
+
+        Example:
+            >>> DataScale.KB.get_scaled_value(2048)
+            2.0
+        """
         match self:
             case self.NONE | self.B:
                 return val
@@ -208,6 +262,14 @@ class DataScale(Enum):
                 return val / self.get_size()
 
     def get_descriptor(self, val: Optional[float] = None) -> str:
+        """Return the data size suffix for this scale.
+
+        For AUTO, `val` is required to determine the suffix.
+
+        Example:
+            >>> DataScale.AUTO.get_descriptor(5_000_000_000)
+            'GB'
+        """
         match self:
             case self.NONE:
                 return ""
@@ -215,25 +277,25 @@ class DataScale(Enum):
                 if val is None:
                     raise ValueError("val must be specified to determine descriptor")
 
-                size = DataScale.B.get_size()
+                size = DataScale.TB.get_size()
                 if val >= size:
-                    return "B"
-
-                size = DataScale.KB.get_size()
-                if val >= size:
-                    return "KB"
-
-                size = DataScale.MB.get_size()
-                if val >= size:
-                    return "MB"
+                    return "TB"
 
                 size = DataScale.GB.get_size()
                 if val >= size:
                     return "GB"
 
-                size = DataScale.TB.get_size()
+                size = DataScale.MB.get_size()
                 if val >= size:
-                    return "TB"
+                    return "MB"
+
+                size = DataScale.KB.get_size()
+                if val >= size:
+                    return "KB"
+
+                size = DataScale.B.get_size()
+                if val >= size:
+                    return "B"
 
                 return ""
             case self.B:
@@ -251,12 +313,24 @@ class DataScale(Enum):
 
 
 class BoolRepresentation(Enum):
+    """Display styles for boolean formatting (True/False, Yes/No, 1/0)."""
+
     TRUE_FALSE = auto()
     YES_NO = auto()
     ZERO_ONE = auto()
 
 
 class FormatConfig(ABC):
+    """Base class for formatting configuration and value rendering.
+
+    Subclasses implement `_generate_fmt()` and optionally override
+    `_get_formatted_value()` for custom rendering behavior.
+
+    Notes:
+        - `format_value()` returns `fallback` when the input is `None`.
+        - Most subclasses use Python's format spec mini-language.
+    """
+
     @property
     def format_type(self) -> FormatType:
         return self._format_type
@@ -558,6 +632,19 @@ class FormatConfig(ABC):
 
 
 class CurrencyFormat(FormatConfig):
+    """Formatter for currency values with symbols and separators.
+
+    Args:
+        precision: Number of decimal places.
+        width: Minimum field width.
+        currency_symbol: Symbol to prefix or suffix (e.g., "$", "€").
+        currency_symbol_position: LEFT or RIGHT positioning.
+
+    Example:
+        >>> CurrencyFormat(precision=2, currency_symbol="$").format_value(12.5)
+        '$12.50'
+    """
+
     def __init__(
         self,
         width: Optional[int] = None,
@@ -624,6 +711,17 @@ class CurrencyFormat(FormatConfig):
 
 
 class PercentageFormat(FormatConfig):
+    """Formatter for percentage values.
+
+    Args:
+        precision: Number of decimal places.
+        always_include_sign: If True, include '+' for positive values.
+
+    Example:
+        >>> PercentageFormat(precision=1).format_value(0.1234)
+        '12.3%'
+    """
+
     def __init__(
         self,
         precision: int,
@@ -659,6 +757,19 @@ class PercentageFormat(FormatConfig):
 
 
 class IntegerFormat(FormatConfig):
+    """Formatter for integer values, optionally scaled or padded.
+
+    Args:
+        width: Minimum field width.
+        thousands_separator: Separator for thousands.
+        pad_value: Pad character (e.g., "0" for zero padding).
+        numeric_scale: Optional scaling (e.g., K, M).
+
+    Example:
+        >>> IntegerFormat(width=4, pad_value="0").format_value(7)
+        '0007'
+    """
+
     def __init__(
         self,
         precision: int = 0,  # Use when numeric_scale is not NumericScale.NONE
@@ -708,6 +819,18 @@ class IntegerFormat(FormatConfig):
 
 
 class FloatFormat(FormatConfig):
+    """Formatter for floating-point values with precision control.
+
+    Args:
+        precision: Number of decimal places.
+        thousands_separator: Separator for thousands.
+        decimal_symbol: Decimal separator.
+
+    Example:
+        >>> FloatFormat(precision=2).format_value(1234.567)
+        '1,234.57'
+    """
+
     def __init__(
         self,
         precision: int,
@@ -791,6 +914,17 @@ class FloatFormat(FormatConfig):
 
 
 class ValueDescFormat(FormatConfig):
+    """Formatter that appends a description label to numeric values.
+
+    Args:
+        description: Text suffix label (e.g., "ms", "GB").
+        description_decorator: Optional decorator around the description.
+
+    Example:
+        >>> ValueDescFormat(precision=1, description="ms").format_value(12.34)
+        '12.3 ms'
+    """
+
     def __init__(
         self,
         precision: int,
@@ -881,6 +1015,19 @@ class ValueDescFormat(FormatConfig):
 
 
 class DateTimeFormat(FormatConfig):
+    """Formatter for datetime strings or duration values.
+
+    Args:
+        date_format: `strftime`-style date format.
+        time_format: `strftime`-style time format.
+        separator: Separator between date and time.
+        use_duration_format: If True, format numeric seconds as duration.
+
+    Example:
+        >>> DateTimeFormat(date_format="%Y-%m-%d", time_format="%H:%M").format_value(datetime(2025,1,2,3,4))
+        '2025-01-02 03:04'
+    """
+
     @property
     def use_duration_format(self) -> bool:
         return self._use_duration_format
@@ -959,6 +1106,17 @@ class DateTimeFormat(FormatConfig):
 
 
 class DataFormat(FormatConfig):
+    """Formatter for data sizes with optional scaling (KB/MB/GB).
+
+    Args:
+        data_scale: Target scale (KB/MB/GB/TB).
+        precision: Number of decimal places.
+
+    Example:
+        >>> DataFormat(data_scale=DataScale.GB, precision=2).format_value(1073741824)
+        '1.00 GB'
+    """
+
     def __init__(
         self,
         width: Optional[int] = None,
@@ -1026,6 +1184,17 @@ class DataFormat(FormatConfig):
 
 
 class StringFormat(FormatConfig):
+    """Formatter for string values with width and alignment.
+
+    Args:
+        width: Minimum field width.
+        alignment: Text alignment.
+
+    Example:
+        >>> StringFormat(width=6, alignment=TextAlignment.RIGHT).format_value("hi")
+        '    hi'
+    """
+
     def __init__(
         self,
         width: Optional[int] = None,
@@ -1055,6 +1224,16 @@ class StringFormat(FormatConfig):
 
 
 class EnumFormat(FormatConfig):
+    """Formatter for Enum values (by name or value).
+
+    Args:
+        use_value: If True, format using enum `.value`, else `.name`.
+
+    Example:
+        >>> EnumFormat(use_value=False).format_value(TextAlignment.LEFT)
+        'LEFT'
+    """
+
     @property
     def use_value(self) -> bool:
         return self._use_value
@@ -1099,6 +1278,17 @@ class EnumFormat(FormatConfig):
 
 
 class BoolFormat(FormatConfig):
+    """Formatter for boolean values with custom labels.
+
+    Args:
+        true_label: Label for True.
+        false_label: Label for False.
+
+    Example:
+        >>> BoolFormat(true_label="Yes", false_label="No").format_value(True)
+        'Yes'
+    """
+
     @property
     def representation(self) -> BoolRepresentation:
         return self._representation
@@ -1185,16 +1375,24 @@ def format_text(
         Formatted string with applied alignment, wrapping, and border characters.
         Multi-line text is separated by newline characters.
 
-    Example:
+    Examples:
         >>> # Simple bordered text
         >>> format_text(
         ...     text="Model Results",
         ...     buffer_width=50,
         ...     prefix="|",
         ...     suffix="|",
-        ...     alignment=TextAlignment.Center
+        ...     alignment=TextAlignment.Center,
         ... )
         '|              Model Results               |'
+        >>> # Wrapped output with left alignment
+        >>> format_text(
+        ...     text="Long message that wraps",
+        ...     buffer_width=20,
+        ...     prefix="|",
+        ...     suffix="|",
+        ... )
+        '|Long message that|\n|wraps              |'
 
         >>> # Create a separator line
         >>> format_text(
@@ -1292,12 +1490,15 @@ def format_label_value_pairs(
     Returns:
         A formatted string with aligned label-value pairs, one per line.
 
-    Example:
+    Examples:
         >>> pairs = ["Model Results", ("Model Type", "Decision Tree"), ("Score", 0.95), ""]
         >>> print(format_label_value_pairs(pairs))
         Model Results
         Model Type:  Decision Tree
         Score:       0.95
+        >>> print(format_label_value_pairs([("Rows", 100), ("Cols", 8)], padding=1))
+        Rows: 100
+        Cols: 8
 
     """
     if not pairs:
@@ -1336,6 +1537,23 @@ def format_as_grid(
     indent: int = 0,
     grid_order: GridOrder = GridOrder.COLUMN_MAJOR,
 ) -> str:
+    """Arrange a list of strings into a fixed-width text grid.
+
+    Args:
+        input: List of strings to place into the grid.
+        cols: Number of columns.
+        padding: Column width padding.
+        indent: Left indentation spaces.
+        grid_order: Column-major or row-major fill.
+
+    Returns:
+        A newline-delimited grid of padded strings.
+
+    Examples:
+        >>> print(format_as_grid(["A", "B", "C", "D"], cols=2, padding=4))
+        A   C
+        B   D
+    """
     if not input:
         return ""
 

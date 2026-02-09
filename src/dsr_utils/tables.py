@@ -1,3 +1,5 @@
+"""Table rendering utilities for report-friendly layouts and PDF export."""
+
 from __future__ import annotations
 import textwrap
 from typing import Tuple, TYPE_CHECKING, Optional, List, Literal, Union, Any, Hashable
@@ -17,6 +19,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class TableEdgeColor:
+    """Border color configuration for table edges."""
+
     left: str = "none"
     right: str = "none"
     top: str = "none"
@@ -24,6 +28,7 @@ class TableEdgeColor:
 
     @classmethod
     def _edge_color(cls, color: Optional[str], default_color: Optional[str]) -> str:
+        """Resolve a single edge color with fallback to a default."""
         bc = color if color is not None else default_color
         return bc if bc is not None else "none"
 
@@ -36,6 +41,12 @@ class TableEdgeColor:
         bottom_border_color: Optional[str] = None,
         default_color: Optional[str] = None,
     ) -> TableEdgeColor:
+        """Build a `TableEdgeColor` with optional per-edge overrides.
+
+        Example:
+            >>> TableEdgeColor._edge_colors(default_color="k")
+            TableEdgeColor(left='k', right='k', top='k', bottom='k')
+        """
         lbc = cls._edge_color(left_border_color, default_color)
         rbc = cls._edge_color(right_border_color, default_color)
         tbc = cls._edge_color(top_border_color, default_color)
@@ -47,12 +58,14 @@ class TableEdgeColor:
         cls,
         color: Optional[str] = "k",  # Black
     ) -> TableEdgeColor:
+        """Return edge colors with all borders set to a single color."""
         return cls._edge_colors(default_color=color)
 
     @classmethod
     def open(
         cls,
     ) -> TableEdgeColor:
+        """Return edge colors with all borders set to 'none'."""
         return cls._edge_colors()
 
     @classmethod
@@ -60,6 +73,7 @@ class TableEdgeColor:
         cls,
         color: Optional[str] = "k",  # Black
     ) -> TableEdgeColor:
+        """Return edge colors with left/right borders set (no top/bottom)."""
         return cls._edge_colors(
             left_border_color=color,
             right_border_color=color,
@@ -70,6 +84,7 @@ class TableEdgeColor:
         cls,
         color: Optional[str] = "k",  # Black
     ) -> TableEdgeColor:
+        """Return edge colors with only the bottom border set."""
         return cls._edge_colors(bottom_border_color=color)
 
     @classmethod
@@ -77,6 +92,7 @@ class TableEdgeColor:
         cls,
         color: Optional[str] = "k",  # Black
     ) -> TableEdgeColor:
+        """Return edge colors with only the right border set."""
         return cls._edge_colors(right_border_color=color)
 
     @classmethod
@@ -84,6 +100,7 @@ class TableEdgeColor:
         cls,
         color: Optional[str] = "k",  # Black
     ) -> TableEdgeColor:
+        """Return edge colors with only the top border set."""
         return cls._edge_colors(top_border_color=color)
 
     @classmethod
@@ -91,11 +108,14 @@ class TableEdgeColor:
         cls,
         color: Optional[str] = "k",  # Black
     ) -> TableEdgeColor:
+        """Return edge colors with only the left border set."""
         return cls._edge_colors(left_border_color=color)
 
 
 @dataclass
 class TableEdgeLinewidth:
+    """Border line width configuration for table edges."""
+
     left: float = 0.0
     right: float = 0.0
     top: float = 0.0
@@ -105,6 +125,7 @@ class TableEdgeLinewidth:
     def _border_linewidth(
         cls, linewidth: Optional[float], default_linewidth: Optional[float]
     ) -> float:
+        """Resolve a single edge linewidth with fallback to a default."""
         lw = linewidth if linewidth is not None else default_linewidth
         return lw if lw is not None else 0.0
 
@@ -117,6 +138,7 @@ class TableEdgeLinewidth:
         bottom_linewidth: Optional[float] = None,
         default_linewidth: Optional[float] = None,
     ) -> TableEdgeLinewidth:
+        """Build a `TableEdgeLinewidth` with optional per-edge overrides."""
         llw = cls._border_linewidth(left_linewidth, default_linewidth=default_linewidth)
         rlw = cls._border_linewidth(
             right_linewidth, default_linewidth=default_linewidth
@@ -129,11 +151,14 @@ class TableEdgeLinewidth:
 
     @classmethod
     def all_edges(cls, linewidth: float) -> TableEdgeLinewidth:
+        """Return a `TableEdgeLinewidth` with all borders set to the same width."""
         return TableEdgeLinewidth(linewidth, linewidth, linewidth, linewidth)
 
 
 @dataclass
 class TableColumnStyle:
+    """Styling options for a table column (fonts, colors, alignment)."""
+
     face_color: str = "none"
     text_color: Optional[str] = None
     edge_color: TableEdgeColor = field(default_factory=TableEdgeColor.open)
@@ -163,6 +188,12 @@ class TableColumnStyle:
     va: Optional[str] = None
 
     def yields_same_size(self, tcs: TableColumnStyle) -> bool:
+        """Compare font metrics to see if two styles yield identical sizing.
+
+        Example:
+            >>> TableColumnStyle().yields_same_size(TableColumnStyle())
+            True
+        """
         # Compares font metrics that influence bounding box size. Assumes external layout
         # factors (such as rotation) are constant across the comparison context.
         attrs = [
@@ -177,6 +208,8 @@ class TableColumnStyle:
 
 
 class TableColumn:
+    """Schema definition for a table column, including display styles."""
+
     @property
     def detail_style(self) -> TableColumnStyle:
         return self._detail_style
@@ -299,6 +332,14 @@ class TableColumn:
         self._unique_detail_sizing_styles = unique_sizing_styles
 
     def calc_scaled_width(self, scale: float) -> None:
+        """Apply a scaling factor to the column width.
+
+        Example:
+            >>> col = TableColumn(detail_style=TableColumnStyle(), fixed_width=2.0)
+            >>> col.calc_scaled_width(scale=0.5)
+            >>> col.scaled_width
+            1.0
+        """
         if scale == 1.0:
             self._scaled_width = self.width
         else:
@@ -306,6 +347,8 @@ class TableColumn:
 
 
 class Table:
+    """Container for table data, columns, and layout metadata."""
+
     @property
     def detail_row_height_fraction(self) -> float:
         return self._detail_row_height_fraction
@@ -470,11 +513,13 @@ class Table:
         self._fixed_row_height = fixed_row_height
 
     def _calc_detail_vert_padding_fraction(self) -> None:
+        """Recalculate combined vertical padding for detail rows."""
         self._detail_vert_padding_fraction = (
             self.detail_tpad_fraction + self.detail_bpad_fraction
         )
 
     def _calc_header_vert_padding_fraction(self) -> None:
+        """Recalculate combined vertical padding for header rows."""
         self._header_vert_padding_fraction = (
             self.header_tpad_fraction + self.header_bpad_fraction
         )
@@ -482,6 +527,16 @@ class Table:
     def get_row_height(
         self, index: int, is_first_row: bool, is_last_row: bool
     ) -> float:
+        """Return the row height (as axis fraction), accounting for padding.
+
+        Args:
+            index: Row index; use -1 for header row.
+            is_first_row: Whether this is the first rendered row.
+            is_last_row: Whether this is the last rendered row.
+
+        Returns:
+            Row height including edge padding.
+        """
         if self.fixed_row_height:
             row_height = self.detail_row_height_fraction
         else:
@@ -502,6 +557,8 @@ class Table:
 
 
 class TablePage:
+    """Represents a single rendered page of a table."""
+
     @property
     def start_row_iloc(self) -> int:
         return self._start_row_iloc
@@ -536,6 +593,13 @@ class TablePage:
     def calc_scaled_rect(
         self, width_scale: float, height_scale: float, target_mid_x: float
     ) -> None:
+        """Scale and reposition the page rectangle for a target axis.
+
+        Args:
+            width_scale: Horizontal scaling factor.
+            height_scale: Vertical scaling factor.
+            target_mid_x: Target axis midpoint (0-1) for centering.
+        """
         orig_width = self.rect.get_width()
         if width_scale != 1.0:
             scaled_width = orig_width * width_scale
@@ -552,6 +616,8 @@ class TablePage:
 
 
 class TableLayout:
+    """Computed layout metadata for rendering a table across pages."""
+
     @property
     def pages(self) -> List[TablePage]:
         return self._pages
@@ -587,6 +653,14 @@ class TableLayout:
         self._va_padding_fraction = va_padding_fraction
 
     def scale_to_axis(self, ax: matplotlib.axes.Axes) -> Tuple[float, float]:
+        """Scale column widths to match a different axis size.
+
+        Args:
+            ax: Target axis to scale into.
+
+        Returns:
+            (width_scale, height_scale) factors.
+        """
         orig_axis_bounds = self.ax.get_window_extent()
         orig_axis_width = orig_axis_bounds.width
         scale_axis_bounds = ax.get_window_extent()
@@ -602,9 +676,13 @@ class TableLayout:
         return width_scale, height_scale
 
     def get_translated_mid_x(self, target_ax: matplotlib.axes.Axes) -> float:
-        """
-        Translates a horizontal coordinate from the layout's original axis
-        to the target axis coordinate system.
+        """Translate the table midpoint from the original axis to a target axis.
+
+        Args:
+            target_ax: Target axis to map into.
+
+        Returns:
+            Midpoint x coordinate in target axis fraction units.
         """
         fig = self.ax.get_figure()
         self.ax.apply_aspect()
@@ -634,6 +712,16 @@ def pts_to_fig_fraction(fig: Figure, pts: float, horizontal: bool = True) -> flo
 def pts_fraction_to_ax_fraction(
     ax: matplotlib.axes.Axes, pts_fraction: float, horizontal: bool = True
 ) -> float:
+    """Convert figure-fraction units to axis-fraction units.
+
+    Args:
+        ax: Target axis used to compute the axis bounding box size.
+        pts_fraction: Figure-fraction value (0-1 of the full figure).
+        horizontal: Whether to use width (True) or height (False) of the axis.
+
+    Returns:
+        Axis-fraction units that correspond to the same absolute distance.
+    """
     bbox = ax.get_position()
     axis_dim = bbox.width if horizontal else bbox.height
     return pts_fraction / axis_dim
@@ -642,6 +730,17 @@ def pts_fraction_to_ax_fraction(
 def ax_fraction_for_fig_pts(
     fig: Figure, ax: matplotlib.axes.Axes, pts: float, horizontal: bool = True
 ) -> float:
+    """Convert points to axis-fraction units.
+
+    Args:
+        fig: Figure used to convert points to figure-fraction units.
+        ax: Target axis used to convert figure fractions to axis fractions.
+        pts: Absolute size in points.
+        horizontal: Whether to use width (True) or height (False) of the axis.
+
+    Returns:
+        Axis-fraction units that represent the provided points.
+    """
     fig_frac = pts_to_fig_fraction(fig=fig, pts=pts, horizontal=horizontal)
     return pts_fraction_to_ax_fraction(
         ax=ax, pts_fraction=fig_frac, horizontal=horizontal
@@ -723,6 +822,22 @@ def _calc_text_dim(
     w_pad: float,
     h_pad: float,
 ) -> Tuple[float, float]:
+    """Return text width and height in axis-fraction units.
+
+    This helper is used to measure rendered text and apply padding when
+    estimating cell sizes. It is primarily for internal sizing logic and
+    is documented for maintainability.
+
+    Args:
+        text: The text artist to measure.
+        ax: Axis the text is rendered in (for unit conversion).
+        renderer: Active renderer used for accurate bounding boxes.
+        w_pad: Horizontal padding to add (axis-fraction units).
+        h_pad: Vertical padding to add (axis-fraction units).
+
+    Returns:
+        Tuple of (width, height) in axis-fraction units.
+    """
     bbox = get_artist_bbox(text, transform_to=ax, renderer=renderer)
     w = bbox.width + w_pad
     h = bbox.height + h_pad
@@ -736,6 +851,24 @@ def _calc_metrics(
     padding_pts: float,
     renderer: RendererBase,
 ) -> None:
+    """Compute layout metrics and cache them on the `Table`.
+
+    This function measures text, padding, and line widths to derive:
+    - header/detail row heights
+    - column widths
+    - per-row height exceptions
+    - padding fractions in axis units
+
+    It mutates `table` in-place and exists mainly to support the
+    sizing pipeline before rendering.
+
+    Args:
+        fig: Figure used for points-to-fraction conversions.
+        ax: Axis used for measuring text in axis-fraction units.
+        table: Table to populate with computed metrics.
+        padding_pts: Default padding in points to include in measurements.
+        renderer: Renderer used for text size measurements.
+    """
     top_fraction = 0.0
     bot_fraction = 0.0
     padding_fraction = 0.0
@@ -923,6 +1056,23 @@ def _get_col_style(
     is_first_row: bool = False,
     is_even_row: bool = False,
 ) -> TableColumnStyle:
+    """Resolve the effective style for a column in the current row.
+
+    Selection order depends on row type:
+    - Header rows prefer `header_style` when available.
+    - First detail rows prefer `first_row_style` when available.
+    - Even detail rows prefer `even_row_style` when available.
+    - Otherwise fall back to `detail_style`.
+
+    Args:
+        tc: Table column with styling configuration.
+        is_header_row: Whether the row is a header row.
+        is_first_row: Whether this is the first detail row.
+        is_even_row: Whether this is an even-numbered detail row.
+
+    Returns:
+        The resolved `TableColumnStyle` to use for the cell.
+    """
     if is_first_row:
         if tc.first_row_style is not None:
             style = tc.first_row_style
@@ -960,6 +1110,31 @@ def _render_row(
     is_first_row: bool = False,
     is_last_row: bool = False,
 ) -> None:
+    """Render a single table row into the provided axis.
+
+    This draws background rectangles, places text, and collects edge
+    line segments for later batching. It is designed as a low-level
+    routine used by header/detail row helpers.
+
+    Args:
+        ax: Target axis for drawing.
+        left_x: Left edge of the row in axis-fraction units.
+        top_y: Top edge of the row in axis-fraction units.
+        row_height: Height of the row in axis-fraction units.
+        columns: Column definitions keyed by column name.
+        data: Row data keyed by column name.
+        styles: Style mapping keyed by column name.
+        default_font_size: Fallback font size for text rendering.
+        edge_linewidth: Linewidth definition for cell edges.
+        va_padding_fraction: Vertical alignment offset in axis units.
+        table_edge_padding_fraction: Table edge padding tuple
+            (left, right, top, bottom) in axis units.
+        cell_top_padding_fraction: Top cell padding in axis units.
+        cell_bottom_padding_fraction: Bottom cell padding in axis units.
+        segments_by_style: Collector for edge segments grouped by style.
+        is_first_row: Whether this is the first row in the table.
+        is_last_row: Whether this is the last row in the table.
+    """
     col_left_x = left_x
     bottom_y = top_y - row_height
     mid_y = (top_y + bottom_y) / 2.0
@@ -1076,6 +1251,23 @@ def _render_header_row(
     is_first_row: bool = False,
     is_last_row: bool = False,
 ) -> None:
+    """Render the header row if headers are enabled.
+
+    This resolves header styles and delegates drawing to `_render_row`.
+    It is documented primarily for internal reference.
+
+    Args:
+        ax: Target axis for drawing.
+        left_x: Left edge of the row in axis-fraction units.
+        top_y: Top edge of the row in axis-fraction units.
+        row_height: Height of the row in axis-fraction units.
+        table: Table containing header config and column styles.
+        default_font_size: Fallback font size for text rendering.
+        va_padding_fraction: Vertical alignment offset in axis units.
+        segments_by_style: Collector for edge segments grouped by style.
+        is_first_row: Whether this is the first row in the table.
+        is_last_row: Whether this is the last row in the table.
+    """
     if not table.include_headers:
         return
 
@@ -1119,6 +1311,25 @@ def _render_detail_row(
     is_first_row: bool = False,
     is_last_row: bool = False,
 ) -> None:
+    """Render a single detail (data) row.
+
+    This resolves per-row styles (first/even/default) and delegates the
+    actual drawing to `_render_row`.
+
+    Args:
+        ax: Target axis for drawing.
+        left_x: Left edge of the row in axis-fraction units.
+        top_y: Top edge of the row in axis-fraction units.
+        row_height: Height of the row in axis-fraction units.
+        table: Table containing data and column styles.
+        iloc: Row index in the underlying DataFrame.
+        default_font_size: Fallback font size for text rendering.
+        va_padding_fraction: Vertical alignment offset in axis units.
+        segments_by_style: Collector for edge segments grouped by style.
+        is_even_row: Whether the row index is even (0-based).
+        is_first_row: Whether this is the first row in the table.
+        is_last_row: Whether this is the last row in the table.
+    """
     styles: dict[str, TableColumnStyle] = {}
 
     for col in table.data.columns:
@@ -1154,6 +1365,18 @@ def render_table(
     dry_run: bool = False,
     renderer: Optional[RendererBase] = None,
 ) -> TableLayout:
+    """Render a table into a PDF page using matplotlib.
+
+    Args:
+        pdf_page: Target PDF page wrapper.
+        table: Table definition to render.
+        ax: Optional axis to render into (defaults to full-page axes).
+        dry_run: If True, only computes layout without drawing.
+        renderer: Optional renderer for text measurements.
+
+    Returns:
+        A `TableLayout` describing the rendered pages and layout.
+    """
     fig = pdf_page.fig
 
     if ax is None:
@@ -1376,6 +1599,15 @@ def render_table_from_page_layout(
     using_axis: Optional[matplotlib.axes.Axes] = None,
     adjust_mid_x: bool = True,
 ) -> None:
+    """Render a specific page from a precomputed table layout.
+
+    Args:
+        pdf_page: Target PDF page wrapper.
+        table_layout: Layout metadata for the table.
+        page_index: Optional page index to render (defaults to first page).
+        using_axis: Optional axis to render into.
+        adjust_mid_x: If True, center the table horizontally.
+    """
     segments_by_style = {}  # Key: (color, width), Value: List of segments
     table = table_layout.table
 

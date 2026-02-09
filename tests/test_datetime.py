@@ -3,7 +3,11 @@
 import pandas as pd
 import pytest
 
-from dsr_utils.datetime import to_datetime, is_string_datetime, infer_string_datetime_format
+from dsr_utils.datetime import (
+    to_datetime,
+    is_string_datetime,
+    infer_string_datetime_format,
+)
 from dsr_utils.enums import DatetimeErrors, DatetimeResolution
 
 
@@ -123,7 +127,7 @@ class TestToDatetime:
         # Unix timestamp for 2025-12-22 00:00:00 UTC
         timestamp = 1766217600
         # pandas interprets integers as nanoseconds by default, need to specify unit='s'
-        result = pd.to_datetime(timestamp, unit='s')
+        result = pd.to_datetime(timestamp, unit="s")
         result = to_datetime(result, unit=DatetimeResolution.SECOND)
         assert isinstance(result, pd.Timestamp)
         assert result.year == 2025
@@ -133,7 +137,8 @@ class TestToDatetime:
         """Test converting list of dates."""
         dates = ["2025-12-22", "2025-12-23", "2025-12-24"]
         result = to_datetime(dates)
-        assert isinstance(result, pd.DatetimeIndex)
+        assert isinstance(result, pd.Series)
+        assert pd.api.types.is_datetime64_any_dtype(result)
         assert len(result) == 3
 
     def test_datetime_with_time(self):
@@ -156,30 +161,38 @@ class TestToDatetime:
 
 class TestIsStringDatetime:
     def test_detects_datetime_strings(self):
-        series = pd.Series([
-            "2025-12-22",
-            "2024-01-01",
-            "2023-07-04",
-            "1999-12-31",
-            "2020-02-29",
-        ])
+        series = pd.Series(
+            [
+                "2025-12-22",
+                "2024-01-01",
+                "2023-07-04",
+                "1999-12-31",
+                "2020-02-29",
+            ]
+        )
         assert is_string_datetime(series) is True
 
     def test_non_object_dtype_returns_false(self):
-        series = pd.Series(pd.to_datetime([
-            "2025-12-22",
-            "2024-01-01",
-        ]))
+        series = pd.Series(
+            pd.to_datetime(
+                [
+                    "2025-12-22",
+                    "2024-01-01",
+                ]
+            )
+        )
         assert is_string_datetime(series) is False
 
     def test_random_strings_return_false(self):
-        series = pd.Series([
-            "apple",
-            "banana",
-            "carrot",
-            "delta",
-            "echo",
-        ])
+        series = pd.Series(
+            [
+                "apple",
+                "banana",
+                "carrot",
+                "delta",
+                "echo",
+            ]
+        )
         assert is_string_datetime(series) is False
 
     def test_mixed_strings_threshold(self):
@@ -205,12 +218,12 @@ class TestIsStringDatetime:
 
     def test_infer_string_datetime_format_datetime(self):
         series = pd.Series(
-            ["2025-12-22 14:30:45", "2024-07-01 00:00:00", "1999-01-31 23:59:59"])
+            ["2025-12-22 14:30:45", "2024-07-01 00:00:00", "1999-01-31 23:59:59"]
+        )
         fmt = infer_string_datetime_format(series)
         assert fmt == "%Y-%m-%d %H:%M:%S"
 
     def test_infer_string_datetime_format_none_for_mixed(self):
-        series = pd.Series(["2025-12-22", "07/01/2024",
-                           "not-a-date"])  # mixed formats
+        series = pd.Series(["2025-12-22", "07/01/2024", "not-a-date"])  # mixed formats
         fmt = infer_string_datetime_format(series, min_success=0.99)
         assert fmt is None

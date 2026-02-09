@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0] - 2026-02-08
+### Breaking
+- Version reset to 1.0.0 to reflect breaking changes and non-backward-compatible updates.
+
+### Fixed
+- `DataScale` AUTO selection now chooses the largest applicable unit (TB→GB→MB→KB→B).
+- `convert_keys_to_case` now correctly recurses and converts nested keys.
+
+### Tests
+- Expanded formatting and strings test coverage for updated behavior.
+
 ## [0.0.4] - 2025-12-22
 ### Fixed
 - Correct month cyclical encoding to use 0-based mapping `(month - 1)` for `sin_month` and `cos_month` to avoid December (`12`) overlapping with `0` (angle `2π`).

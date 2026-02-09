@@ -1,3 +1,5 @@
+"""String utilities for case conversion and parsing helpers."""
+
 from dsr_utils.enums import StringCase
 from typing import Callable
 
@@ -202,10 +204,22 @@ def to_constant_case(name: str) -> str:
 
 
 def to_original_string(str: str) -> str:
+    """Return the input string unchanged.
+
+    Useful as a no-op converter when no casing transformation is desired.
+    """
     return str
 
 
 def func_for_string_conv(string_case: StringCase) -> Callable[[str], str]:
+    """Resolve a case conversion function for the requested `StringCase`.
+
+    Args:
+        string_case: Target string case enumeration.
+
+    Returns:
+        A conversion function that maps a string to the requested case.
+    """
     match string_case:
         case StringCase.SNAKE:
             convert_func = to_snake_case
@@ -224,29 +238,63 @@ def func_for_string_conv(string_case: StringCase) -> Callable[[str], str]:
 
 
 def convert_keys_to_case(input_dict: dict, string_case: StringCase) -> dict:
-    dict_copy = input_dict.copy()
+    """Convert all keys in a dict (recursively) to the requested case.
+
+    Args:
+        input_dict: Dictionary whose keys should be transformed.
+        string_case: Target string case.
+
+    Returns:
+        A shallow copy of the input dict with converted keys.
+    """
     convert_func = func_for_string_conv(string_case)
 
-    def convert_keys_to_case_using_func(input_dict: dict):
-        for k, v in input_dict.items():
-            convert_func(k)
-
+    def convert_keys_to_case_using_func(source: dict) -> dict:
+        converted: dict = {}
+        for k, v in source.items():
+            new_key = convert_func(k)
             if isinstance(v, dict):
-                convert_keys_to_case_using_func(v)
+                converted[new_key] = convert_keys_to_case_using_func(v)
+            else:
+                converted[new_key] = v
+        return converted
 
-    convert_keys_to_case_using_func(dict_copy)
-    return dict_copy
+    return convert_keys_to_case_using_func(input_dict)
 
 
 def convert_list_to_case(input: list, string_case: StringCase) -> list:
+    """Convert a list of strings to the requested case.
+
+    Args:
+        input: List of strings to convert.
+        string_case: Target string case.
+
+    Returns:
+        List of converted strings.
+    """
     convert_func = func_for_string_conv(string_case)
     return [convert_func(s) for s in input]
 
 
 def convert_str_to_case(input: str, string_case: StringCase) -> str:
+    """Convert a single string to the requested case.
+
+    Args:
+        input: String to convert.
+        string_case: Target string case.
+
+    Returns:
+        Converted string.
+    """
     convert_func = func_for_string_conv(string_case)
     return convert_func(input)
 
 
 def apply_tracking(text: str) -> str:
+    """Apply character tracking (spacing) to a string.
+
+    Example:
+        >>> apply_tracking("ABC")
+        'A B C'
+    """
     return " ".join(list(text))
