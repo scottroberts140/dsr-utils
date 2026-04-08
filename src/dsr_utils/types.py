@@ -1,30 +1,46 @@
 """Type conversion helpers for common data inputs."""
 
-import numpy as np
 from typing import Any
+
+import numpy as np
 
 
 def any_to_list(a: Any) -> list[Any]:
-    """Convert various data types to a list representation.
+    """
+    Convert various data types to a list representation.
 
-    Handles conversion from list, numpy array, scalar types (int/float/str),
-    tuple, and dict to a list format. Prints warning for unrecognized types.
+    Handles conversion from lists, NumPy arrays, scalars (int, float, str),
+    tuples, and dictionaries.
 
-    Args:
-        a (Any): Value to convert to list.
+    Parameters
+    ----------
+    a : Any
+        The input value to convert into a list format.
 
-    Returns:
-        list[Any]: List representation of the input value.
+    Returns
+    -------
+    list of Any
+        A list representation of the input. Note that scalar values are
+        returned as single-element lists containing their string
+        representation, while tuples are returned as a nested list.
 
-    Example:
-        >>> any_to_list([1, 2, 3])
-        [1, 2, 3]
-        >>> any_to_list(np.array([1, 2, 3]))
-        [1, 2, 3]
-        >>> any_to_list(42)
-        ['42']
-        >>> any_to_list({'a': 1, 'b': 2})
-        [1, 2]
+    Notes
+    -----
+    - NumPy arrays are converted using the `.tolist()` method.
+    - Dictionary inputs result in a list of the dictionary's values.
+    - If the data type is unrecognized, a warning is printed and an
+      empty list is returned.
+
+    Examples
+    --------
+    >>> any_to_list(np.array([1, 2, 3]))
+    [1, 2, 3]
+    >>> any_to_list(42)
+    ['42']
+    >>> any_to_list({'a': 1, 'b': 2})
+    [1, 2]
+    >>> any_to_list((10, 20))
+    [[10, 20]]
     """
     match a:
         case list():

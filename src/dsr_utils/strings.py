@@ -1,28 +1,32 @@
 """String utilities for case conversion and parsing helpers."""
 
+from typing import Any, Callable
+
 from dsr_utils.enums import StringCase
-from typing import Callable
 
 
-def is_float_string(value) -> bool:
-    """Check if a value can be converted to a float.
+def is_float_string(value: Any) -> bool:
+    """
+    Check if a value can be converted to a float.
 
-    Attempts to convert the value to float and returns True if successful,
-    False if conversion fails or value is None.
+    Attempts to cast the input to a float and returns the success status.
 
-    Args:
-        value: Any value to test for float conversion.
+    Parameters
+    ----------
+    value : Any
+        The value to test for float conversion.
 
-    Returns:
-        bool: True if value can be converted to float, False otherwise.
+    Returns
+    -------
+    bool
+        True if the value can be converted to a float, False otherwise.
 
-    Example:
-        >>> is_float_string("3.14")
-        True
-        >>> is_float_string("abc")
-        False
-        >>> is_float_string(None)
-        False
+    Examples
+    --------
+    >>> is_float_string("3.14")
+    True
+    >>> is_float_string("abc")
+    False
     """
     if value is None:
         return False
@@ -34,17 +38,21 @@ def is_float_string(value) -> bool:
 
 
 def _normalize_separators(name: str) -> str:
-    """Normalize a string by handling various separators.
+    """
+    Normalize a string by handling various separators.
 
-    Internal helper function that converts spaces, hyphens, and underscore sequences
-    into single underscores, and handles camelCase/PascalCase by inserting underscores
-    before uppercase letters preceded by lowercase letters or digits.
+    Internal helper that standardizes spaces, hyphens, and casing transitions
+    into single underscores.
 
-    Args:
-        name (str): The string to normalize.
+    Parameters
+    ----------
+    name : str
+        The string to normalize.
 
-    Returns:
-        str: The normalized string with consistent underscore separators.
+    Returns
+    -------
+    str
+        The normalized string with consistent underscore separators.
     """
     import re
 
@@ -65,160 +73,142 @@ def _normalize_separators(name: str) -> str:
 
 
 def to_snake_case(name: str) -> str:
-    """Convert a string to snake_case format.
+    """
+    Convert a string to snake_case format.
 
-    Handles various input formats including PascalCase, camelCase, spaces,
-    hyphens, and mixed separators.
+    Parameters
+    ----------
+    name : str
+        The string to convert (typically a column name).
 
-    Args:
-        name (str): The string to convert (typically a column name).
+    Returns
+    -------
+    str
+        The string in lowercase with underscore separators.
 
-    Returns:
-        str: The string in snake_case format (lowercase with underscores).
-
-    Example:
-        >>> to_snake_case('FirstName')
-        'first_name'
-        >>> to_snake_case('first-name')
-        'first_name'
-        >>> to_snake_case('FIRST_NAME')
-        'first_name'
-        >>> to_snake_case('Annual Salary')
-        'annual_salary'
+    Examples
+    --------
+    >>> to_snake_case('FirstName')
+    'first_name'
+    >>> to_snake_case('Annual Salary')
+    'annual_salary'
     """
     return _normalize_separators(name).lower()
 
 
 def to_pascal_case(name: str) -> str:
-    """Convert a string to PascalCase format.
-
-    Handles various input formats including snake_case, camelCase, spaces,
-    hyphens, and mixed separators.
-
-    Args:
-        name (str): The string to convert.
-
-    Returns:
-        str: The string in PascalCase format (each word capitalized, no separators).
-
-    Example:
-        >>> to_pascal_case('first_name')
-        'FirstName'
-        >>> to_pascal_case('first-name')
-        'FirstName'
-        >>> to_pascal_case('firstName')
-        'FirstName'
-        >>> to_pascal_case('annual salary')
-        'AnnualSalary'
     """
-    # Normalize to have underscores as separators
+    Convert a string to PascalCase format.
+
+    Parameters
+    ----------
+    name : str
+        The string to convert.
+
+    Returns
+    -------
+    str
+        The string with each word capitalized and no separators.
+
+    Examples
+    --------
+    >>> to_pascal_case('first_name')
+    'FirstName'
+    """
     normalized = _normalize_separators(name)
-    # Split on underscores and capitalize each part
     return "".join(word.capitalize() for word in normalized.split("_"))
 
 
 def to_camel_case(name: str) -> str:
-    """Convert a string to camelCase format.
-
-    Handles various input formats including snake_case, PascalCase, spaces,
-    hyphens, and mixed separators.
-
-    Args:
-        name (str): The string to convert.
-
-    Returns:
-        str: The string in camelCase format (first word lowercase, rest capitalized, no separators).
-
-    Example:
-        >>> to_camel_case('first_name')
-        'firstName'
-        >>> to_camel_case('first-name')
-        'firstName'
-        >>> to_camel_case('FirstName')
-        'firstName'
-        >>> to_camel_case('annual salary')
-        'annualSalary'
     """
-    # Normalize to have underscores as separators
+    Convert a string to camelCase format.
+
+    Parameters
+    ----------
+    name : str
+        The string to convert.
+
+    Returns
+    -------
+    str
+        The string with the first word lowercase and subsequent words capitalized.
+
+    Examples
+    --------
+    >>> to_camel_case('annual salary')
+    'annualSalary'
+    """
     normalized = _normalize_separators(name)
-    # Split on underscores
     parts = normalized.split("_")
-    # First part lowercase, rest capitalized
     return parts[0].lower() + "".join(word.capitalize() for word in parts[1:])
 
 
 def to_kebab_case(name: str) -> str:
-    """Convert a string to kebab-case format.
-
-    Handles various input formats including snake_case, camelCase, PascalCase,
-    spaces, and mixed separators.
-
-    Args:
-        name (str): The string to convert.
-
-    Returns:
-        str: The string in kebab-case format (lowercase with hyphens).
-
-    Example:
-        >>> to_kebab_case('first_name')
-        'first-name'
-        >>> to_kebab_case('firstName')
-        'first-name'
-        >>> to_kebab_case('FIRST_NAME')
-        'first-name'
-        >>> to_kebab_case('annual salary')
-        'annual-salary'
     """
-    # Normalize to have underscores as separators
+    Convert a string to kebab-case format.
+
+    Parameters
+    ----------
+    name : str
+        The string to convert.
+
+    Returns
+    -------
+    str
+        The string in lowercase with hyphen separators.
+    """
     normalized = _normalize_separators(name)
-    # Convert to lowercase and replace underscores with hyphens
     return normalized.lower().replace("_", "-")
 
 
 def to_constant_case(name: str) -> str:
-    """Convert a string to CONSTANT_CASE format.
-
-    Handles various input formats including snake_case, camelCase, PascalCase,
-    spaces, hyphens, and mixed separators.
-
-    Args:
-        name (str): The string to convert.
-
-    Returns:
-        str: The string in CONSTANT_CASE format (uppercase with underscores).
-
-    Example:
-        >>> to_constant_case('first_name')
-        'FIRST_NAME'
-        >>> to_constant_case('firstName')
-        'FIRST_NAME'
-        >>> to_constant_case('first-name')
-        'FIRST_NAME'
-        >>> to_constant_case('annual salary')
-        'ANNUAL_SALARY'
     """
-    # Normalize to have underscores as separators
+    Convert a string to CONSTANT_CASE format.
+
+    Parameters
+    ----------
+    name : str
+        The string to convert.
+
+    Returns
+    -------
+    str
+        The string in uppercase with underscore separators.
+    """
     normalized = _normalize_separators(name)
-    # Convert to uppercase
     return normalized.upper()
 
 
-def to_original_string(str: str) -> str:
-    """Return the input string unchanged.
-
-    Useful as a no-op converter when no casing transformation is desired.
+def to_original_string(text: str) -> str:
     """
-    return str
+    Return the input string unchanged.
+
+    Parameters
+    ----------
+    text : str
+        The input string.
+
+    Returns
+    -------
+    str
+        The original input string.
+    """
+    return text
 
 
 def func_for_string_conv(string_case: StringCase) -> Callable[[str], str]:
-    """Resolve a case conversion function for the requested `StringCase`.
+    """
+    Resolve a case conversion function for the requested StringCase.
 
-    Args:
-        string_case: Target string case enumeration.
+    Parameters
+    ----------
+    string_case : StringCase
+        Target string case enumeration.
 
-    Returns:
-        A conversion function that maps a string to the requested case.
+    Returns
+    -------
+    Callable[[str], str]
+        A conversion function mapped to the requested case.
     """
     match string_case:
         case StringCase.SNAKE:
@@ -238,14 +228,20 @@ def func_for_string_conv(string_case: StringCase) -> Callable[[str], str]:
 
 
 def convert_keys_to_case(input_dict: dict, string_case: StringCase) -> dict:
-    """Convert all keys in a dict (recursively) to the requested case.
+    """
+    Convert all keys in a dictionary (recursively) to the requested case.
 
-    Args:
-        input_dict: Dictionary whose keys should be transformed.
-        string_case: Target string case.
+    Parameters
+    ----------
+    input_dict : dict
+        The dictionary whose keys should be transformed.
+    string_case : StringCase
+        Target string case.
 
-    Returns:
-        A shallow copy of the input dict with converted keys.
+    Returns
+    -------
+    dict
+        A new dictionary with transformed keys.
     """
     convert_func = func_for_string_conv(string_case)
 
@@ -262,39 +258,63 @@ def convert_keys_to_case(input_dict: dict, string_case: StringCase) -> dict:
     return convert_keys_to_case_using_func(input_dict)
 
 
-def convert_list_to_case(input: list, string_case: StringCase) -> list:
-    """Convert a list of strings to the requested case.
+def convert_list_to_case(input_list: list[str], string_case: StringCase) -> list[str]:
+    """
+    Convert a list of strings to the requested case.
 
-    Args:
-        input: List of strings to convert.
-        string_case: Target string case.
+    Parameters
+    ----------
+    input_list : list of str
+        List of strings to convert.
+    string_case : StringCase
+        Target string case.
 
-    Returns:
+    Returns
+    -------
+    list of str
         List of converted strings.
     """
     convert_func = func_for_string_conv(string_case)
-    return [convert_func(s) for s in input]
+    return [convert_func(s) for s in input_list]
 
 
-def convert_str_to_case(input: str, string_case: StringCase) -> str:
-    """Convert a single string to the requested case.
+def convert_str_to_case(input_str: str, string_case: StringCase) -> str:
+    """
+    Convert a single string to the requested case.
 
-    Args:
-        input: String to convert.
-        string_case: Target string case.
+    Parameters
+    ----------
+    input_str : str
+        String to convert.
+    string_case : StringCase
+        Target string case.
 
-    Returns:
+    Returns
+    -------
+    str
         Converted string.
     """
     convert_func = func_for_string_conv(string_case)
-    return convert_func(input)
+    return convert_func(input_str)
 
 
 def apply_tracking(text: str) -> str:
-    """Apply character tracking (spacing) to a string.
+    """
+    Apply character tracking (spacing) to a string.
 
-    Example:
-        >>> apply_tracking("ABC")
-        'A B C'
+    Parameters
+    ----------
+    text : str
+        The input string.
+
+    Returns
+    -------
+    str
+        The string with spaces inserted between characters.
+
+    Examples
+    --------
+    >>> apply_tracking("ABC")
+    'A B C'
     """
     return " ".join(list(text))

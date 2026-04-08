@@ -1,59 +1,68 @@
 """Formatting helpers for numbers, dates, enums, and table-friendly output."""
 
 from __future__ import annotations
-from enum import Enum, auto
-from typing import Any, Sequence, Union, Optional, TypeVar
-import textwrap
+
 import math
-from dsr_utils.enums import GridOrder
+import textwrap
 from abc import ABC, abstractmethod
 from datetime import datetime
+from enum import Enum, auto
+from typing import Any, Optional, Sequence, TypeVar, Union
+
+from dsr_utils.enums import GridOrder
 
 T_Enum = TypeVar("T_Enum", bound=Enum)
 
 
 class TextAlignment(Enum):
-    """Enumeration for text alignment options in formatted output.
+    """
+    Enumeration for text alignment options in formatted output.
 
     Used for aligning text in tables, reports, and other formatted displays.
-
-    Attributes:
-        DEFAULT: No alignment specified, uses default alignment.
-        LEFT: Align text to the left margin.
-        CENTER: Center text within available space.
-        RIGHT: Align text to the right margin.
     """
 
-    DEFAULT = (0,)
-    LEFT = (1,)
-    CENTER = (2,)
-    RIGHT = (3,)
+    DEFAULT = auto()
+    LEFT = auto()
+    CENTER = auto()
+    RIGHT = auto()
 
     def formatting_symbol(self) -> str:
-        """Return the format spec alignment symbol for this alignment.
+        """
+        Return the Python format specification alignment symbol.
 
-        Example:
-            >>> TextAlignment.RIGHT.formatting_symbol()
-            '>'
+        Returns
+        -------
+        str
+            The symbol used in format strings ('<', '^', or '>').
+
+        Examples
+        --------
+        >>> TextAlignment.RIGHT.formatting_symbol()
+        '>'
         """
         match self:
             case TextAlignment.LEFT:
-                alignment_symbol = "<"
+                return "<"
             case TextAlignment.CENTER:
-                alignment_symbol = "^"
+                return "^"
             case TextAlignment.RIGHT:
-                alignment_symbol = ">"
+                return ">"
             case _:
-                alignment_symbol = ""
-
-        return alignment_symbol
+                return ""
 
     def matplot_alignment(self) -> str:
-        """Return the matplotlib text alignment string.
+        """
+        Return the matplotlib-compatible text alignment string.
 
-        Example:
-            >>> TextAlignment.CENTER.matplot_alignment()
-            'center'
+        Returns
+        -------
+        str
+            Alignment string ('left', 'center', or 'right').
+
+        Examples
+        --------
+        >>> TextAlignment.CENTER.matplot_alignment()
+        'center'
         """
         match self:
             case TextAlignment.LEFT:
@@ -69,7 +78,13 @@ class TextAlignment(Enum):
 
 
 class FormatType(Enum):
-    """Supported formatting categories for `FormatConfig` subclasses."""
+    """
+    Supported formatting categories for `FormatConfig` subclasses.
+
+    Defines the fundamental data types that the formatting system
+    can process, ranging from numeric and financial to temporal
+    and boolean data.
+    """
 
     INTEGER = auto()
     FLOAT = auto()
@@ -84,14 +99,21 @@ class FormatType(Enum):
 
 
 class CurrencySymbolPosition(Enum):
-    """Placement of the currency symbol relative to the numeric value."""
+    """
+    Placement of the currency symbol relative to the numeric value.
+    """
 
-    LEFT = auto()
-    RIGHT = auto()
+    LEFT = auto()  # e.g., $100.00
+    RIGHT = auto()  # e.g., 100.00€
 
 
 class NumericScale(Enum):
-    """Numeric scaling options (none, automatic, or fixed K/M/B)."""
+    """
+    Numeric scaling options for magnitude-based formatting.
+
+    Allows values to be displayed as raw numbers or scaled to
+    Thousands (K), Millions (M), or Billions (B).
+    """
 
     NONE = auto()
     AUTO = auto()  # Choose automatically, based on magnitude
@@ -121,28 +143,32 @@ class NumericScale(Enum):
                 return 1
 
     def get_scaled_value(self, val: float) -> float:
-        """Scale a value according to the selected numeric scale.
+        """
+        Scale a value according to the selected numeric scale.
 
-        Example:
-            >>> NumericScale.K.get_scaled_value(12345)
-            12.345
+        Parameters
+        ----------
+        val : float
+            The raw numeric value to be scaled.
+
+        Returns
+        -------
+        float
+            The value divided by the appropriate scale factor.
+
+        Examples
+        --------
+        >>> NumericScale.K.get_scaled_value(12345)
+        12.345
         """
         match self:
             case self.NONE:
                 return val
             case self.AUTO:
-                size = NumericScale.B.get_size()
-                if val >= size:
-                    return val / size
-
-                size = NumericScale.M.get_size()
-                if val >= size:
-                    return val / size
-
-                size = NumericScale.K.get_size()
-                if val >= size:
-                    return val / size
-
+                for scale in [self.B, self.M, self.K]:
+                    size = scale.get_size()
+                    if abs(val) >= size:
+                        return val / size
                 return val
             case _:
                 size = self.get_size()
@@ -192,7 +218,11 @@ class NumericScale(Enum):
 
 
 class DataScale(Enum):
-    """Data size scaling options (bytes through terabytes)."""
+    """
+    Data size scaling options from Bytes through Terabytes.
+
+    Uses base-2 (1024) multipliers for calculating scale factors.
+    """
 
     NONE = auto()
     AUTO = auto()  # Choose automatically, based on magnitude
@@ -203,11 +233,18 @@ class DataScale(Enum):
     TB = auto()  # Terabytes
 
     def get_size(self) -> float:
-        """Return the scale factor in bytes for this data scale.
+        """
+        Return the scale factor in bytes for this data scale.
 
-        Example:
-            >>> DataScale.GB.get_size()
-            1073741824
+        Returns
+        -------
+        float
+            The multiplier (1024^n) for the selected scale.
+
+        Examples
+        --------
+        >>> DataScale.GB.get_size()
+        1073741824
         """
         match self:
             case self.NONE | self.B:
@@ -236,22 +273,10 @@ class DataScale(Enum):
             case self.NONE | self.B:
                 return val
             case self.AUTO:
-                size = DataScale.KB.get_size()
-                if val >= size:
-                    return val / size
-
-                size = DataScale.MB.get_size()
-                if val >= size:
-                    return val / size
-
-                size = DataScale.GB.get_size()
-                if val >= size:
-                    return val / size
-
-                size = DataScale.TB.get_size()
-                if val >= size:
-                    return val / size
-
+                for scale in [self.TB, self.GB, self.MB, self.KB]:
+                    size = scale.get_size()
+                    if abs(val) >= size:
+                        return val / size
                 return val
             case _:
                 size = self.get_size()
@@ -321,14 +346,67 @@ class BoolRepresentation(Enum):
 
 
 class FormatConfig(ABC):
-    """Base class for formatting configuration and value rendering.
+    """
+    Base class for formatting configuration and value rendering.
 
-    Subclasses implement `_generate_fmt()` and optionally override
-    `_get_formatted_value()` for custom rendering behavior.
+    Defines the shared properties and core logic for converting raw values
+    into formatted strings. Subclasses must implement `_generate_fmt`
+    to define their specific Python format specification string.
 
-    Notes:
-        - `format_value()` returns `fallback` when the input is `None`.
-        - Most subclasses use Python's format spec mini-language.
+    Parameters
+    ----------
+    format_type : FormatType
+        The category of formatting to apply (e.g., INTEGER, FLOAT, CURRENCY).
+    width : int, optional
+        Minimum field width for the output string.
+    precision : int, optional
+        Number of decimal places to include. If None, defaults to 2 for
+        DataScale, 1 for NumericScale, and 2 otherwise.
+    always_include_sign : bool, default False
+        If True, includes '+' for positive numbers.
+    accounting_style : bool, default False
+        If True, uses specialized alignment or wrapping for negative values
+        (e.g., parentheses in Currency).
+    currency_symbol : str, default ""
+        The symbol to use for currency formatting (e.g., "$").
+    currency_symbol_position : CurrencySymbolPosition, default LEFT
+        Placement of the currency symbol relative to the value.
+    thousands_separator : str, default ","
+        Character used for thousands separation.
+    decimal_symbol : str, default "."
+        Character used for the decimal point.
+    description : str, default ""
+        A descriptive label or unit suffix to append to the value.
+    description_leading_space : bool, default True
+        Whether to add a space before the description/unit.
+    description_decorator : str, default ""
+        Characters used to wrap the description (e.g., "()" or "[]").
+    date_format : str, default ""
+        The `strftime` string for date components.
+    time_format : str, default ""
+        The `strftime` string for time components.
+    pad_value : str, default ""
+        Character used for padding the output to reach the specified `width`.
+    numeric_scale : NumericScale, default NumericScale.NONE
+        Magnitude scaling (K, M, B) to apply before formatting.
+    data_scale : DataScale, default DataScale.NONE
+        Binary magnitude scaling (KB, MB, GB, TB) to apply.
+    fallback : str, default "-"
+        String returned when the input value is None.
+    alignment : TextAlignment, default LEFT
+        Horizontal alignment (LEFT, CENTER, RIGHT).
+    include_space_before_scale : bool, default False
+        Whether to insert a space between the numeric value and the scale
+        descriptor (e.g., '1.25 MB' vs '1.25MB'). Set to False to match
+        compact audit report standards (e.g., '4.14GB' or '5.4K').
+
+    Notes
+    -----
+    - Modifying any property (e.g., `width`, `precision`) after
+      instantiation will automatically re-generate the format string.
+    - The `format_value` method is the public entry point for rendering.
+    - If `precision` is explicitly set to 0 with a scale, the value will
+      be rounded to the nearest whole unit (e.g., 1.2M becomes 1M).
     """
 
     @property
@@ -497,6 +575,15 @@ class FormatConfig(ABC):
         self._generate_fmt()
 
     @property
+    def include_space_before_scale(self) -> bool:
+        return self._include_space_before_scale
+
+    @include_space_before_scale.setter
+    def include_space_before_scale(self, val: bool) -> None:
+        self._include_space_before_scale = val
+        self._generate_fmt()
+
+    @property
     def alignment(self) -> TextAlignment:
         return self._alignment
 
@@ -513,7 +600,7 @@ class FormatConfig(ABC):
         self,
         format_type: FormatType,
         width: Optional[int] = None,
-        precision: int = 2,
+        precision: Optional[int] = None,
         always_include_sign: bool = False,
         accounting_style: bool = False,
         currency_symbol: str = "",
@@ -537,27 +624,23 @@ class FormatConfig(ABC):
         data_scale: DataScale = DataScale.NONE,
         fallback: str = "-",
         alignment: TextAlignment = TextAlignment.LEFT,
+        include_space_before_scale: bool = False,
     ):
         self._format_type = format_type
 
-        if precision < 0:
-            precision = 0
-
-        if format_type is FormatType.DATA:
-            if data_scale is not DataScale.NONE and precision == 0:
+        # Handle Precision Defaults
+        if precision is None:
+            if format_type is FormatType.DATA and data_scale is not DataScale.NONE:
                 precision = 2
-                print(
-                    f"INFO: Precision adjusted from 0 to 2 for data_scale: {data_scale}."
-                )
-        else:
-            if numeric_scale is not NumericScale.NONE and precision == 0:
+            elif numeric_scale is not NumericScale.NONE:
                 precision = 1
-                print(
-                    f"INFO: Precision adjusted from 0 to 1 for numeric_scale: {numeric_scale}."
-                )
+            else:
+                precision = 2  # General default
+
+        # Ensure it's not negative
+        self._precision = max(0, precision)
 
         self._width = width
-        self._precision = precision
         self._always_include_sign = always_include_sign
         self._accounting_style = accounting_style
         self._currency_symbol = currency_symbol
@@ -575,6 +658,7 @@ class FormatConfig(ABC):
         self._fallback = fallback
         self._alignment = alignment
         self._fmt = ""
+        self._include_space_before_scale = include_space_before_scale
         self._generate_fmt()
 
     @abstractmethod
@@ -628,21 +712,53 @@ class FormatConfig(ABC):
             "fallback": self.fallback,
             "alignment": self.alignment,
             "fmt": self.fmt,
+            "include_space_before_scale": self.include_space_before_scale,
         }
 
 
 class CurrencyFormat(FormatConfig):
-    """Formatter for currency values with symbols and separators.
+    """
+    Formatter for currency values with symbols and separators.
 
-    Args:
-        precision: Number of decimal places.
-        width: Minimum field width.
-        currency_symbol: Symbol to prefix or suffix (e.g., "$", "€").
-        currency_symbol_position: LEFT or RIGHT positioning.
+    Parameters
+    ----------
+    width : int, optional
+        Minimum field width for the output string.
+    precision : int, default 2
+        Number of decimal places to include.
+    accounting_style : bool, default False
+        If True, use accounting-style formatting for negative values.
+    always_include_sign : bool, default False
+        Whether to always show the '+' or '-' sign.
+    currency_symbol : str, default "$"
+        The currency identifier to display.
+    currency_symbol_position : CurrencySymbolPosition, default LEFT
+        Whether to place the symbol before (LEFT) or after (RIGHT) the value.
+    thousands_separator : str, default ","
+        Character used for thousands separation.
+    decimal_symbol : str, default "."
+        Character used for the decimal point.
+    pad_value : str, default ""
+        Character used for padding the output to reach the specified `width`.
+    numeric_scale : NumericScale, default NONE
+        Scaling to apply (e.g., K, M, B) for large currency values.
+    alignment : TextAlignment, default RIGHT
+        Horizontal alignment for the formatted output.
+    fallback : str, default "-"
+        String returned when the input value is None.
+    include_space_before_scale : bool, default False
+        Toggle for visual spacing between the value and its unit suffix.
+        - If True: Formats as '$1.25 M'.
+        - If False: Formats as '$1.25M' (compact audit standard).
 
-    Example:
-        >>> CurrencyFormat(precision=2, currency_symbol="$").format_value(12.5)
-        '$12.50'
+    Examples
+    --------
+    >>> fmt = CurrencyFormat(precision=2, currency_symbol="$")
+    >>> fmt.format_value(12.5)
+    '$12.50'
+    >>> fmt_scaled = CurrencyFormat(numeric_scale=NumericScale.M)
+    >>> fmt_scaled.format_value(1250000)
+    '$1.25M'
     """
 
     def __init__(
@@ -659,6 +775,7 @@ class CurrencyFormat(FormatConfig):
         numeric_scale: NumericScale = NumericScale.NONE,
         alignment: TextAlignment = TextAlignment.RIGHT,
         fallback: str = "-",
+        include_space_before_scale: bool = False,
     ):
         super().__init__(
             format_type=FormatType.CURRENCY,
@@ -674,6 +791,7 @@ class CurrencyFormat(FormatConfig):
             numeric_scale=numeric_scale,
             alignment=alignment,
             fallback=fallback,
+            include_space_before_scale=include_space_before_scale,
         )
 
     def _generate_fmt(self):
@@ -699,11 +817,13 @@ class CurrencyFormat(FormatConfig):
         return CurrencyFormat(
             width=format.width,
             precision=format.precision,
+            accounting_style=format.accounting_style,
             always_include_sign=format.always_include_sign,
             currency_symbol=format.currency_symbol,
             currency_symbol_position=format.currency_symbol_position,
             thousands_separator=format.thousands_separator,
             decimal_symbol=format.decimal_symbol,
+            pad_value=format.pad_value,
             numeric_scale=format.numeric_scale,
             alignment=format.alignment,
             fallback=format.fallback,
@@ -711,20 +831,40 @@ class CurrencyFormat(FormatConfig):
 
 
 class PercentageFormat(FormatConfig):
-    """Formatter for percentage values.
+    """
+    Formatter for percentage values.
 
-    Args:
-        precision: Number of decimal places.
-        always_include_sign: If True, include '+' for positive values.
+    Multiplies the input value by 100 and appends a percent sign.
 
-    Example:
-        >>> PercentageFormat(precision=1).format_value(0.1234)
-        '12.3%'
+    Parameters
+    ----------
+    precision : int, optional
+        Number of decimal places to include after scaling to percentage.
+        If None, defaults to 2.
+    always_include_sign : bool, default False
+        Whether to include a '+' for positive percentage values.
+    width : int, optional
+        Minimum field width for the output string.
+    decimal_symbol : str, default "."
+        Character used for the decimal point.
+    alignment : TextAlignment, default RIGHT
+        Horizontal alignment for the formatted output.
+    fallback : str, default "-"
+        String returned when the input value is None.
+
+    Examples
+    --------
+    >>> fmt = PercentageFormat(precision=1)
+    >>> fmt.format_value(0.1234)
+    '12.3%'
+    >>> fmt_delta = PercentageFormat(precision=1, always_include_sign=True)
+    >>> fmt_delta.format_value(0.052)
+    '+5.2%'
     """
 
     def __init__(
         self,
-        precision: int,
+        precision: Optional[int] = None,
         always_include_sign: bool = False,
         width: Optional[int] = None,
         decimal_symbol: str = ".",
@@ -748,8 +888,8 @@ class PercentageFormat(FormatConfig):
     def from_format(cls, format: PercentageFormat) -> PercentageFormat:
         return PercentageFormat(
             precision=format.precision,
-            width=format.width,
             always_include_sign=format.always_include_sign,
+            width=format.width,
             decimal_symbol=format.decimal_symbol,
             alignment=format.alignment,
             fallback=format.fallback,
@@ -757,22 +897,49 @@ class PercentageFormat(FormatConfig):
 
 
 class IntegerFormat(FormatConfig):
-    """Formatter for integer values, optionally scaled or padded.
+    """
+    Formatter for integer values, optionally scaled or padded.
 
-    Args:
-        width: Minimum field width.
-        thousands_separator: Separator for thousands.
-        pad_value: Pad character (e.g., "0" for zero padding).
-        numeric_scale: Optional scaling (e.g., K, M).
+    Parameters
+    ----------
+    precision : int, optional
+        Number of decimal places to show when numeric_scale is not NONE.
+        If None, defaults to 0 for raw integers and 1 for scaled integers.
+    width : int, optional
+        Minimum field width for padding.
+    always_include_sign : bool, default False
+        Whether to always show the '+' or '-' sign.
+    accounting_style : bool, default False
+        If True, uses specialized alignment or wrapping for negative values
+        (e.g., parentheses).
+    thousands_separator : str, default ","
+        Character used to separate thousands.
+    numeric_scale : NumericScale, default NumericScale.NONE
+        The scale to apply (e.g., K, M, B).
+    alignment : TextAlignment, default TextAlignment.RIGHT
+        Horizontal alignment for the formatted output.
+    fallback : str, default "-"
+        String returned when the input value is None.
+    include_space_before_scale : bool, default False
+        Toggle for visual spacing between the value and its unit suffix.
+        - If True: Formats as '1.25M'.
+        - If False: Formats as '1.25 M'.
 
-    Example:
-        >>> IntegerFormat(width=4, pad_value="0").format_value(7)
-        '0007'
+    Examples
+    --------
+    >>> fmt_raw = IntegerFormat(width=4, pad_value="0")
+    >>> fmt_raw.format_value(7)
+    '0007'
+    >>> fmt_scaled = IntegerFormat(precision=2, numeric_scale=NumericScale.M)
+    >>> fmt_scaled.format_value(1250000)
+    '1.25M'
     """
 
     def __init__(
         self,
-        precision: int = 0,  # Use when numeric_scale is not NumericScale.NONE
+        precision: Optional[
+            int
+        ] = None,  # Use when numeric_scale is not NumericScale.NONE
         width: Optional[int] = None,
         always_include_sign: bool = False,
         accounting_style: bool = False,
@@ -781,6 +948,7 @@ class IntegerFormat(FormatConfig):
         numeric_scale: NumericScale = NumericScale.NONE,
         alignment: TextAlignment = TextAlignment.RIGHT,
         fallback: str = "-",
+        include_space_before_scale: bool = False,
     ):
         super().__init__(
             format_type=FormatType.INTEGER,
@@ -793,6 +961,7 @@ class IntegerFormat(FormatConfig):
             numeric_scale=numeric_scale,
             alignment=alignment,
             fallback=fallback,
+            include_space_before_scale=include_space_before_scale,
         )
 
     def _generate_fmt(self):
@@ -811,7 +980,9 @@ class IntegerFormat(FormatConfig):
             precision=format.precision,
             width=format.width,
             always_include_sign=format.always_include_sign,
+            accounting_style=format.accounting_style,
             thousands_separator=format.thousands_separator,
+            pad_value=format.pad_value,
             numeric_scale=format.numeric_scale,
             alignment=format.alignment,
             fallback=format.fallback,
@@ -819,21 +990,50 @@ class IntegerFormat(FormatConfig):
 
 
 class FloatFormat(FormatConfig):
-    """Formatter for floating-point values with precision control.
+    """
+    Formatter for floating-point values with precision control.
 
-    Args:
-        precision: Number of decimal places.
-        thousands_separator: Separator for thousands.
-        decimal_symbol: Decimal separator.
+    Parameters
+    ----------
+    precision : int, optional
+        Number of decimal places to include. If None, defaults to 2.
+    width : int, optional
+        Minimum field width for the output string.
+    always_include_sign : bool, default False
+        If True, includes '+' for positive numbers.
+    accounting_style : bool, default False
+        If True, uses specialized alignment or wrapping for negative values
+        (e.g., parentheses).
+    thousands_separator : str, default ","
+        Character used to separate thousands.
+    decimal_symbol : str, default "."
+        Character used for the decimal point.
+    pad_value : str, default ""
+        Character used for padding the output to reach the specified `width`.
+    numeric_scale : NumericScale, default NumericScale.NONE
+        The magnitude-based scale to apply to the value.
+    alignment : TextAlignment, default RIGHT
+        Horizontal alignment (LEFT, CENTER, RIGHT).
+    fallback : str, default "-"
+        String returned when the input value is None.
+    include_space_before_scale : bool, default False
+        Toggle for visual spacing between the value and its unit suffix.
+        - If True: Formats as '1.25M'.
+        - If False: Formats as '1.25 M'.
 
-    Example:
-        >>> FloatFormat(precision=2).format_value(1234.567)
-        '1,234.57'
+    Examples
+    --------
+    >>> fmt = FloatFormat(precision=2)
+    >>> fmt.format_value(1234.567)
+    '1,234.57'
+    >>> fmt_scaled = FloatFormat(precision=2, numeric_scale=NumericScale.K)
+    >>> fmt_scaled.format_value(1234.567)
+    '1.23K'
     """
 
     def __init__(
         self,
-        precision: int,
+        precision: Optional[int] = None,
         width: Optional[int] = None,
         always_include_sign: bool = False,
         accounting_style: bool = False,
@@ -843,6 +1043,7 @@ class FloatFormat(FormatConfig):
         numeric_scale: NumericScale = NumericScale.NONE,
         alignment: TextAlignment = TextAlignment.RIGHT,
         fallback: str = "-",
+        include_space_before_scale: bool = False,
     ):
         super().__init__(
             format_type=FormatType.FLOAT,
@@ -856,6 +1057,7 @@ class FloatFormat(FormatConfig):
             numeric_scale=numeric_scale,
             alignment=alignment,
             fallback=fallback,
+            include_space_before_scale=include_space_before_scale,
         )
 
     def _generate_fmt(self) -> None:
@@ -863,6 +1065,19 @@ class FloatFormat(FormatConfig):
 
     @classmethod
     def get_format(cls, config: FormatConfig) -> str:
+        """
+        Generate a Python format specification string based on configuration.
+
+        Parameters
+        ----------
+        config : FormatConfig
+            The configuration object containing precision, alignment, and scale.
+
+        Returns
+        -------
+        str
+            A format specifier string (e.g., ">10.2f" or ",d").
+        """
         if config.accounting_style:
             align = "="
         else:
@@ -897,7 +1112,8 @@ class FloatFormat(FormatConfig):
     def _get_formatted_value(self, val: Any) -> str:
         scaled_value = self.numeric_scale.get_scaled_value(val)
         scale_descriptor = self.numeric_scale.get_descriptor(val=val)
-        return f"{scaled_value:{self._fmt}}{scale_descriptor}"
+        sep = " " if self.include_space_before_scale and scale_descriptor else ""
+        return f"{scaled_value:{self._fmt}}{sep}{scale_descriptor}"
 
     @classmethod
     def from_format(cls, format: FloatFormat) -> FloatFormat:
@@ -905,6 +1121,7 @@ class FloatFormat(FormatConfig):
             precision=format.precision,
             width=format.width,
             always_include_sign=format.always_include_sign,
+            accounting_style=format.accounting_style,
             thousands_separator=format.thousands_separator,
             decimal_symbol=format.decimal_symbol,
             numeric_scale=format.numeric_scale,
@@ -914,20 +1131,63 @@ class FloatFormat(FormatConfig):
 
 
 class ValueDescFormat(FormatConfig):
-    """Formatter that appends a description label to numeric values.
+    """
+    Formatter that appends a description label to numeric values.
 
-    Args:
-        description: Text suffix label (e.g., "ms", "GB").
-        description_decorator: Optional decorator around the description.
+    Combines magnitude scaling (Numeric or Data) with a customizable
+    text suffix and optional decorators like brackets or parentheses.
 
-    Example:
-        >>> ValueDescFormat(precision=1, description="ms").format_value(12.34)
-        '12.3 ms'
+    Parameters
+    ----------
+    precision : int, optional
+        Number of decimal places. If None, defaults to 1 for numeric
+        scales and 2 for data scales.
+    width : int, optional
+        Minimum field width for the output string.
+    always_include_sign : bool, default False
+        If True, includes '+' for positive numbers.
+    accounting_style : bool, default False
+        If True, uses specialized alignment or wrapping for negative values
+        (e.g., parentheses in Currency).
+    thousands_separator : str, default ","
+        Character used for thousands separation.
+    decimal_symbol : str, default "."
+        Character used for the decimal point.
+    pad_value : str, default ""
+        Character used for padding the output to reach the specified `width`.
+    description : str, default ""
+        The unit or label to append (e.g., "ms", "GB", "rows/sec").
+    description_leading_space : bool, default True
+        Whether to include a space before the decorated description.
+    description_decorator : str, default ""
+        Characters used to wrap the description. If one character is provided,
+        brackets '(', '[', and '{' are automatically matched.
+    alignment : TextAlignment, default RIGHT
+        Horizontal alignment (LEFT, CENTER, RIGHT).
+    numeric_scale : NumericScale, default NONE
+        Standard magnitude scaling (K, M, B).
+    data_scale : DataScale, default NONE
+        Byte-based magnitude scaling (KB, MB, GB).
+    fallback : str, default "-"
+        String returned when the input value is None.
+    include_space_before_scale : bool, default False
+        Toggle for visual spacing between the value and its unit suffix.
+        - If True: Formats as '1.25M', or '1.25MB'.
+        - If False: Formats as '1.25 M', or '1.25 MB'.
+
+    Examples
+    --------
+    >>> fmt = ValueDescFormat(precision=1, description="ms")
+    >>> fmt.format_value(12.34)
+    '12.3 ms'
+    >>> fmt_wrap = ValueDescFormat(description="Score", description_decorator="[")
+    >>> fmt_wrap.format_value(95)
+    '95.0 [Score]'
     """
 
     def __init__(
         self,
-        precision: int,
+        precision: Optional[int] = None,
         width: Optional[int] = None,
         always_include_sign: bool = False,
         accounting_style: bool = False,
@@ -948,6 +1208,7 @@ class ValueDescFormat(FormatConfig):
         numeric_scale: NumericScale = NumericScale.NONE,
         data_scale: DataScale = DataScale.NONE,
         fallback: str = "-",
+        include_space_before_scale: bool = False,
     ):
         super().__init__(
             format_type=FormatType.VALUE_DESC,
@@ -965,14 +1226,29 @@ class ValueDescFormat(FormatConfig):
             numeric_scale=numeric_scale,
             data_scale=data_scale,
             fallback=fallback,
+            include_space_before_scale=include_space_before_scale,
         )
 
     def _generate_fmt(self):
         self._fmt = FloatFormat.get_format(self)
 
     def _get_formatted_value(self, val: float) -> str:
-        formatted_val = f"{self.numeric_scale.get_scaled_value(val):{self._fmt}}"
-        scale_descriptor = self.numeric_scale.get_descriptor(val=val)
+        # 1. Determine which scale to use
+        if self.data_scale is not DataScale.NONE:
+            scaled_value = self.data_scale.get_scaled_value(val)
+            scale_descriptor = self.data_scale.get_descriptor(val=val)
+        else:
+            scaled_value = self.numeric_scale.get_scaled_value(val)
+            scale_descriptor = self.numeric_scale.get_descriptor(val=val)
+
+        # 2. Apply the format specification (precision, width, etc.)
+        formatted_val = f"{scaled_value:{self._fmt}}"
+
+        # 3. Handle the empty description edge case
+        if not self.description:
+            return f"{formatted_val}{scale_descriptor}"
+
+        # 4. Handle Decorators
         left_decorator = ""
         right_decorator = ""
         space = " " if self.description_leading_space else ""
@@ -980,7 +1256,6 @@ class ValueDescFormat(FormatConfig):
 
         if len(decorator) > 0:
             left_decorator = decorator[0]
-
             if len(decorator) > 1:
                 right_decorator = decorator[1]
             else:
@@ -1002,8 +1277,10 @@ class ValueDescFormat(FormatConfig):
             precision=format.precision,
             width=format.width,
             always_include_sign=format.always_include_sign,
+            accounting_style=format.accounting_style,
             thousands_separator=format.thousands_separator,
             decimal_symbol=format.decimal_symbol,
+            pad_value=format.pad_value,
             description=format.description,
             description_leading_space=format.description_leading_space,
             description_decorator=format.description_decorator,
@@ -1015,17 +1292,35 @@ class ValueDescFormat(FormatConfig):
 
 
 class DateTimeFormat(FormatConfig):
-    """Formatter for datetime strings or duration values.
+    """
+    Formatter for datetime objects or numeric duration values.
 
-    Args:
-        date_format: `strftime`-style date format.
-        time_format: `strftime`-style time format.
-        separator: Separator between date and time.
-        use_duration_format: If True, format numeric seconds as duration.
+    This class operates in two modes:
+    1. Timestamp mode: Formats `datetime.datetime` objects using strftime.
+    2. Duration mode: Formats numeric seconds into a human-readable
+       string (e.g., '1h 5m 10s').
 
-    Example:
-        >>> DateTimeFormat(date_format="%Y-%m-%d", time_format="%H:%M").format_value(datetime(2025,1,2,3,4))
-        '2025-01-02 03:04'
+    Parameters
+    ----------
+    date_format : str, optional
+        `strftime`-style date format string.
+    time_format : str, optional
+        `strftime`-style time format string.
+    separator : str, default " "
+        The string to place between the date and time components.
+    use_duration_format : bool, default False
+        If True, treats the input as numeric seconds (int or float).
+    alignment : TextAlignment, default RIGHT
+        Horizontal alignment for the formatted output.
+    fallback : str, default "-"
+        String returned when the input value is None.
+
+    Notes
+    -----
+    - When `use_duration_format` is False, the input to `format_value`
+      should be a `datetime.datetime` object.
+    - When `use_duration_format` is True, the input should be a
+      numeric value representing total seconds.
     """
 
     @property
@@ -1083,7 +1378,9 @@ class DateTimeFormat(FormatConfig):
             minutes, seconds = divmod(rem, 60)
             if hours > 0:
                 return f"{hours}h {minutes}m {seconds}s"
-            return f"{minutes}m {seconds}s"
+            if minutes > 0:
+                return f"{minutes}m {seconds}s"
+            return f"{seconds}s"
         else:
             return f"{val:{self._fmt}}"
 
@@ -1093,7 +1390,7 @@ class DateTimeFormat(FormatConfig):
             date_format=format.date_format,
             time_format=format.time_format,
             separator=format.separator,
-            use_duration_format=format._use_duration_format,
+            use_duration_format=format.use_duration_format,
             alignment=format.alignment,
             fallback=format.fallback,
         )
@@ -1106,26 +1403,53 @@ class DateTimeFormat(FormatConfig):
 
 
 class DataFormat(FormatConfig):
-    """Formatter for data sizes with optional scaling (KB/MB/GB).
+    """
+    Formatter for data sizes (bytes) with magnitude scaling.
 
-    Args:
-        data_scale: Target scale (KB/MB/GB/TB).
-        precision: Number of decimal places.
+    Converts raw byte counts into human-readable strings using base-2 (1024)
+    scaling for KB, MB, GB, and TB.
 
-    Example:
-        >>> DataFormat(data_scale=DataScale.GB, precision=2).format_value(1073741824)
-        '1.00 GB'
+    Parameters
+    ----------
+    width : int, optional
+        Minimum field width for the output string.
+    precision : int, optional
+        Number of decimal places. If None, defaults to 2 when a scale is used.
+    thousands_separator : str, default ","
+        Character used for thousands separation.
+    decimal_symbol : str, default "."
+        Character used for the decimal point.
+    data_scale : DataScale, default NONE
+        The magnitude to scale by (e.g., MB, GB, or AUTO).
+    alignment : TextAlignment, default RIGHT
+        Horizontal alignment for the formatted output.
+    fallback : str, default "-"
+        String returned when the input value is None.
+    include_space_before_scale : bool, default False
+        Toggle for visual spacing between the value and its unit suffix.
+        - If True: Formats as '1.25 MB' or '5.4 K'.
+        - If False: Formats as '1.25MB' or '5.4K'.
+
+    Examples
+    --------
+    >>> fmt = DataFormat(data_scale=DataScale.GB, precision=2)
+    >>> fmt.format_value(1073741824)
+    '1.00 GB'
+    >>> fmt_auto = DataFormat(data_scale=DataScale.AUTO)
+    >>> fmt_auto.format_value(5242880)
+    '5.00 MB'
     """
 
     def __init__(
         self,
         width: Optional[int] = None,
-        precision: int = 2,
+        precision: Optional[int] = None,
         thousands_separator: str = ",",
         decimal_symbol: str = ".",
         data_scale: DataScale = DataScale.NONE,
         alignment: TextAlignment = TextAlignment.RIGHT,
         fallback: str = "-",
+        include_space_before_scale: bool = False,
     ):
         super().__init__(
             format_type=FormatType.FLOAT,
@@ -1136,39 +1460,17 @@ class DataFormat(FormatConfig):
             data_scale=data_scale,
             alignment=alignment,
             fallback=fallback,
+            include_space_before_scale=include_space_before_scale,
         )
 
     def _generate_fmt(self) -> None:
-        self._fmt = DataFormat.get_format(config=self)
-
-    @classmethod
-    def get_format(cls, config: FormatConfig) -> str:
-        fmt = f"{config.alignment.formatting_symbol()}"
-
-        if config.width is not None:
-            fmt = f"{fmt}{config.width}"
-
-        is_percentage = config.format_type is FormatType.PERCENTAGE
-        if not is_percentage and len(config.thousands_separator) > 0:
-            fmt = f"{fmt}{config.thousands_separator}"
-
-        is_integer = config.format_type is FormatType.INTEGER
-        if not is_integer and len(config.decimal_symbol) > 0:
-            fmt = f"{fmt}{config.decimal_symbol}{config.precision}"
-
-        if is_percentage:
-            fmt += "%"
-        elif is_integer:
-            fmt += "d"
-        else:
-            fmt += "f"
-
-        return fmt
+        self._fmt = FloatFormat.get_format(config=self)
 
     def _get_formatted_value(self, val: Any) -> str:
         scaled_value = self.data_scale.get_scaled_value(val)
         scale_descriptor = self.data_scale.get_descriptor(val)
-        return f"{scaled_value:{self._fmt}}{scale_descriptor}"
+        sep = " " if self.include_space_before_scale and scale_descriptor else ""
+        return f"{scaled_value:{self._fmt}}{sep}{scale_descriptor}"
 
     @classmethod
     def from_format(cls, format: DataFormat) -> DataFormat:
@@ -1184,15 +1486,23 @@ class DataFormat(FormatConfig):
 
 
 class StringFormat(FormatConfig):
-    """Formatter for string values with width and alignment.
+    """
+    Formatter for string values with width and alignment.
 
-    Args:
-        width: Minimum field width.
-        alignment: Text alignment.
+    Parameters
+    ----------
+    width : int, optional
+        Minimum field width for the output string.
+    fallback : str, default "-"
+        String returned when the input value is None.
+    alignment : TextAlignment, default LEFT
+        Horizontal alignment for the formatted output.
 
-    Example:
-        >>> StringFormat(width=6, alignment=TextAlignment.RIGHT).format_value("hi")
-        '    hi'
+    Examples
+    --------
+    >>> fmt = StringFormat(width=6, alignment=TextAlignment.RIGHT)
+    >>> fmt.format_value("hi")
+    '    hi'
     """
 
     def __init__(
@@ -1209,29 +1519,50 @@ class StringFormat(FormatConfig):
         )
 
     def _generate_fmt(self):
-        self._fmt = ""
+        align = self.alignment.formatting_symbol()
+        width = self.width if self.width is not None else ""
+        self._fmt = f"{align}{width}"
 
-    def _get_formatted_value(self, val: float) -> str:
-        return str(val)
+    def _get_formatted_value(self, val: Any) -> str:
+        # Use the generated format string to handle width and alignment
+        return f"{str(val):{self._fmt}}"
 
     @classmethod
     def from_format(cls, format: StringFormat) -> StringFormat:
         return StringFormat(
             width=format.width,
-            alignment=format.alignment,
             fallback=format.fallback,
+            alignment=format.alignment,
         )
 
 
 class EnumFormat(FormatConfig):
-    """Formatter for Enum values (by name or value).
+    """
+    Formatter for Enum values (by name or value).
 
-    Args:
-        use_value: If True, format using enum `.value`, else `.name`.
+    Extracts the display string from an Enum member based on whether
+    the name or the value is desired for output.
 
-    Example:
-        >>> EnumFormat(use_value=False).format_value(TextAlignment.LEFT)
-        'LEFT'
+    Parameters
+    ----------
+    use_value : bool, default True
+        If True, formats using the Enum's `.value`.
+        If False, uses the Enum's `.name`.
+    alignment : TextAlignment, default LEFT
+        Horizontal alignment for the formatted output.
+    fallback : str, default "-"
+        String returned when the input value is None.
+
+    Examples
+    --------
+    >>> from enum import Enum
+    >>> class Color(Enum): RED = 1
+    >>> fmt_name = EnumFormat(use_value=False)
+    >>> fmt_name.format_value(Color.RED)
+    'RED'
+    >>> fmt_val = EnumFormat(use_value=True)
+    >>> fmt_val.format_value(Color.RED)
+    '1'
     """
 
     @property
@@ -1256,12 +1587,18 @@ class EnumFormat(FormatConfig):
         self._use_value = use_value
 
     def _generate_fmt(self) -> None:
-        self._fmt = ""
+        # Use formatting symbols from TextAlignment (e.g., '<', '>', '^')
+        align = self.alignment.formatting_symbol()
+        width = self.width if self.width is not None else ""
+        self._fmt = f"{align}{width}"
 
     def _get_formatted_value(self, val: Any) -> str:
         if isinstance(val, Enum):
-            return str(val.value) if self.use_value else str(val.name)
-        return str(val)
+            display_str = str(val.value) if self.use_value else str(val.name)
+        else:
+            display_str = str(val)
+
+        return f"{display_str:{self._fmt}}"
 
     @classmethod
     def from_format(cls, format: EnumFormat) -> EnumFormat:
@@ -1278,15 +1615,29 @@ class EnumFormat(FormatConfig):
 
 
 class BoolFormat(FormatConfig):
-    """Formatter for boolean values with custom labels.
+    """
+    Formatter for boolean values with customizable representations.
 
-    Args:
-        true_label: Label for True.
-        false_label: Label for False.
+    Translates boolean inputs into user-friendly text or numeric
+    indicators based on the selected representation style.
 
-    Example:
-        >>> BoolFormat(true_label="Yes", false_label="No").format_value(True)
-        'Yes'
+    Parameters
+    ----------
+    alignment : TextAlignment, default LEFT
+        Horizontal alignment for the formatted output.
+    fallback : str, default "-"
+        String returned when the input value is None.
+    representation : BoolRepresentation, default TRUE_FALSE
+        The display style to use (e.g., True/False, Yes/No, or 1/0).
+
+    Examples
+    --------
+    >>> fmt = BoolFormat(representation=BoolRepresentation.YES_NO)
+    >>> fmt.format_value(True)
+    'Yes'
+    >>> fmt_num = BoolFormat(representation=BoolRepresentation.ZERO_ONE)
+    >>> fmt_num.format_value(False)
+    '0'
     """
 
     @property
@@ -1309,17 +1660,25 @@ class BoolFormat(FormatConfig):
         self._representation = representation
 
     def _generate_fmt(self):
-        self._fmt = ""
+        align = self.alignment.formatting_symbol()
+        width = self.width if self.width is not None else ""
+        self._fmt = f"{align}{width}"
 
-    def _get_formatted_value(self, val: float) -> str:
+    def _get_formatted_value(self, val: Any) -> str:
         bool_val = bool(val)
+        display_str = ""
+
         match self.representation:
             case BoolRepresentation.TRUE_FALSE:
-                return "True" if bool_val else "False"
+                display_str = "True" if bool_val else "False"
             case BoolRepresentation.YES_NO:
-                return "Yes" if bool_val else "No"
+                display_str = "Yes" if bool_val else "No"
+            case BoolRepresentation.ZERO_ONE:
+                display_str = "1" if bool_val else "0"
             case _:
-                return "1" if bool_val else "0"
+                display_str = str(bool_val)
+
+        return f"{display_str:{self._fmt}}"
 
     @classmethod
     def from_format(cls, format: BoolFormat) -> BoolFormat:
@@ -1348,76 +1707,45 @@ def format_text(
     include_end_lf: bool = False,
     insert_leading_space: bool = False,
 ) -> str:
-    """Format text with wrapping, alignment, and decorative borders for display.
+    """
+    Format text with wrapping, alignment, and decorative borders.
 
-    This utility function formats text within a specified width, adds prefix/suffix
-    characters (typically border characters), handles text alignment, and optionally
-    wraps long text across multiple lines. Commonly used for creating formatted
-    console output with consistent visual styling.
+    Parameters
+    ----------
+    text : str
+        The content to format.
+    buffer_width : int
+        Total width of the line including prefix and suffix.
+    prefix : str
+        String prepended to each line (e.g., "|").
+    suffix : str
+        String appended to each line (e.g., "|").
+    include_prefix_on_wrapped_lines : bool, default True
+        If False, uses empty spacing instead of the prefix on lines 2+.
+    include_suffix_on_wrapped_lines : bool, default True
+        If False, uses empty spacing instead of the suffix on lines 2+.
+    fill_buffer : bool, default False
+        If True, repeats `text` to fill the usable width (e.g., for separators).
+    alignment : TextAlignment, default LEFT
+        Horizontal alignment (LEFT, CENTER, RIGHT) within the buffer.
+    include_start_lf : bool, default False
+        If True, prepends a newline before the result.
+    include_end_lf : bool, default False
+        If True, appends a newline after the result.
+    insert_leading_space : bool, default False
+        If True, adds a space after the prefix, reducing usable width by 1.
 
-    Args:
-        text: The text content to format.
-        buffer_width: Total width including prefix and suffix characters.
-        prefix: String to prepend to each line (e.g., border character).
-        suffix: String to append to each line (e.g., border character).
-        fill_buffer: If True, repeats text to fill the entire buffer width.
-            Useful for creating separator lines. Defaults to False.
-        alignment: Text alignment within the buffer (Left, Center, or Right).
-            Defaults to TextAlignment.Left.
-        include_start_lf: If True, prepends a newline before the formatted text.
-            Defaults to False.
-        include_end_lf: If True, appends a newline after the formatted text.
-            Defaults to False.
-        insert_leading_space: If True, adds a space after the prefix on each line.
-            Reduces usable buffer width by 1. Defaults to False.
+    Returns
+    -------
+    str
+        The formatted string, potentially multi-line.
 
-    Returns:
-        Formatted string with applied alignment, wrapping, and border characters.
-        Multi-line text is separated by newline characters.
-
-    Examples:
-        >>> # Simple bordered text
-        >>> format_text(
-        ...     text="Model Results",
-        ...     buffer_width=50,
-        ...     prefix="|",
-        ...     suffix="|",
-        ...     alignment=TextAlignment.Center,
-        ... )
-        '|              Model Results               |'
-        >>> # Wrapped output with left alignment
-        >>> format_text(
-        ...     text="Long message that wraps",
-        ...     buffer_width=20,
-        ...     prefix="|",
-        ...     suffix="|",
-        ... )
-        '|Long message that|\n|wraps              |'
-
-        >>> # Create a separator line
-        >>> format_text(
-        ...     text="=",
-        ...     buffer_width=50,
-        ...     prefix="|",
-        ...     suffix="|",
-        ...     fill_buffer=True
-        ... )
-        '|================================================|'
-
-        >>> # Long text with wrapping
-        >>> format_text(
-        ...     text="This is a very long text that will wrap",
-        ...     buffer_width=30,
-        ...     prefix="| ",
-        ...     suffix=" |",
-        ...     insert_leading_space=True
-        ... )
-        '|  This is a very long    |\\n|  text that will wrap   |'
-
-    Note:
-        The actual usable width for text is buffer_width minus the lengths of
-        prefix and suffix (and minus 1 if insert_leading_space is True).
-        Text wrapping uses Python's textwrap module for clean line breaks.
+    Examples
+    --------
+    >>> format_text("Results", 20, "|", "|", alignment=TextAlignment.CENTER)
+    '|      Results      |'
+    >>> format_text("=", 20, "|", "|", fill_buffer=True)
+    '|==================|'
     """
     buffer_width -= len(prefix) + len(suffix)
     text_alignment = alignment.formatting_symbol()
@@ -1455,7 +1783,7 @@ def format_text(
                 prefix = " " * len(prefix)
 
             if not include_suffix_on_wrapped_lines:
-                suffix = " " * len(prefix)
+                suffix = " " * len(suffix)
 
     if include_start_lf:
         start_lf = "\n"
@@ -1473,33 +1801,34 @@ def format_text(
 def format_label_value_pairs(
     pairs: Sequence[Union[tuple[str, Any], str]], padding: int = 2, suffix: str = ":"
 ) -> str:
-    """Aligns key-value pairs by the suffix (usually a colon), while allowing raw strings
-    for headers or blank lines.
+    """
+    Align label-value pairs by a common suffix with support for raw headers.
 
-    This utility function formats a list of label-value pairs with consistent
-    alignment. All suffix characters (typically colons) are positioned at the same
-    column, creating a neat, aligned output suitable for displaying configuration
-    information, metadata, or structured reports.
+    Calculates a consistent 'gutter' width based on the longest label provided,
+    ensuring all values are vertically aligned while preserving raw strings
+    for section headers or spacing.
 
-    Args:
-        pairs: Sequence of (label, value) tuples to format; raw strings are rendered
-            verbatim so you can insert headers or blank lines.
-        padding: Number of spaces between the suffix and the value. Defaults to 2.
-        suffix: String to append to each label (typically a colon ':'). Defaults to ":".
+    Parameters
+    ----------
+    pairs : Sequence[Union[tuple[str, Any], str]]
+        A sequence of items to format. Tuples are treated as (label, value)
+        pairs; strings are rendered verbatim.
+    padding : int, default 2
+        Number of spaces to insert between the suffix and the value.
+    suffix : str, default ":"
+        The character(s) appended to labels to facilitate alignment.
 
-    Returns:
-        A formatted string with aligned label-value pairs, one per line.
+    Returns
+    -------
+    str
+        A multi-line string with aligned pairs and integrated headers.
 
-    Examples:
-        >>> pairs = ["Model Results", ("Model Type", "Decision Tree"), ("Score", 0.95), ""]
-        >>> print(format_label_value_pairs(pairs))
-        Model Results
-        Model Type:  Decision Tree
-        Score:       0.95
-        >>> print(format_label_value_pairs([("Rows", 100), ("Cols", 8)], padding=1))
-        Rows: 100
-        Cols: 8
-
+    Examples
+    --------
+    >>> pairs = [("Model", "RFR"), ("Score", 0.76)]
+    >>> print(format_label_value_pairs(pairs, padding=1))
+    Model: RFR
+    Score: 0.76
     """
     if not pairs:
         return ""
@@ -1537,22 +1866,33 @@ def format_as_grid(
     indent: int = 0,
     grid_order: GridOrder = GridOrder.COLUMN_MAJOR,
 ) -> str:
-    """Arrange a list of strings into a fixed-width text grid.
+    """
+    Arrange a list of strings into a fixed-width text grid.
 
-    Args:
-        input: List of strings to place into the grid.
-        cols: Number of columns.
-        padding: Column width padding.
-        indent: Left indentation spaces.
-        grid_order: Column-major or row-major fill.
+    Parameters
+    ----------
+    input : list[str]
+        List of strings to place into the grid.
+    cols : int, default 3
+        Number of columns in the grid.
+    padding : int, default 25
+        The fixed width of each column.
+    indent : int, default 0
+        Number of spaces to indent the entire grid from the left margin.
+    grid_order : GridOrder, default COLUMN_MAJOR
+        The order in which to fill the grid (COLUMN_MAJOR or ROW_MAJOR).
 
-    Returns:
-        A newline-delimited grid of padded strings.
+    Returns
+    -------
+    str
+        A multi-line string representing the formatted grid.
 
-    Examples:
-        >>> print(format_as_grid(["A", "B", "C", "D"], cols=2, padding=4))
-        A   C
-        B   D
+    Examples
+    --------
+    >>> items = ["A", "B", "C", "D"]
+    >>> print(format_as_grid(items, cols=2, padding=5))
+    A    C
+    B    D
     """
     if not input:
         return ""

@@ -3,8 +3,8 @@
 import math
 from typing import Any, cast
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from dsr_utils.enums import (
     DatetimeErrors,
@@ -21,46 +21,40 @@ def to_datetime(
     errors: DatetimeErrors = DatetimeErrors.RAISE,
 ) -> pd.Timestamp | pd.Series:
     """
-    Convert value to datetime, preserving existing datetime types unless unit specified.
+    Convert input to datetime, preserving existing types unless a unit is specified.
 
-    This function wraps pandas.to_datetime() with additional logic to preserve
-    existing datetime types when no specific resolution is requested.
+    Wraps pandas.to_datetime with additional logic to prevent unnecessary
+    re-casting of existing temporal types when no specific resolution is requested.
 
-    Args:
-        value: Input to convert. Can be scalar, Series, array, string, etc.
-        unit: Target resolution (SECOND, MILLISECOND, MICROSECOND, NANOSECOND).
-            If None, uses pandas default (typically MICROSECOND in pandas >= 2.0)
-            or preserves existing datetime resolution.
-        format: strptime format string for parsing (e.g., '%Y-%m-%d %H:%M:%S').
-            If None, pandas will infer the format.
-        errors: Error handling strategy:
-            - RAISE: raise exception on invalid parse
-            - COERCE: set invalid values as NaT (Not a Time)
+    Parameters
+    ----------
+    value : Any
+        The input to convert. Can be a scalar, Series, array, or string.
+    unit : DatetimeResolution, optional
+        Target resolution (e.g., SECOND, MILLISECOND). If None, preserves
+        existing resolution or uses the pandas default.
+    format : str, optional
+        The `strptime` format string for parsing. If None, pandas will
+        attempt to infer the format.
+    errors : DatetimeErrors, default RAISE
+        Error handling strategy:
+        - RAISE: raise an exception on invalid parsing.
+        - COERCE: set invalid values as NaT (Not a Time).
 
-    Returns:
-        pd.Timestamp for scalar input, pd.Series for array-like input.
-        For Series, returns with datetime64 dtype at specified resolution.
+    Returns
+    -------
+    pd.Timestamp or pd.Series
+        A pandas Timestamp for scalar input or a Series for array-like input.
+        Series are returned with a datetime64 dtype at the specified resolution.
 
-    Examples:
-        >>> # Convert string to datetime (uses pandas default resolution)
-        >>> to_datetime('2025-12-22')
-        Timestamp('2025-12-22 00:00:00')
-
-        >>> # Convert with specific resolution
-        >>> to_datetime('2025-12-22', unit=DatetimeResolution.NANOSECOND)
-        Timestamp('2025-12-22 00:00:00')
-
-        >>> # Convert Series with format
-        >>> df['date'] = to_datetime(df['date_str'], format='%Y-%m-%d')
-
-        >>> # Coerce errors to NaT
-        >>> to_datetime('invalid', errors=DatetimeErrors.COERCE)
-        NaT
-
-        >>> # Preserve existing datetime type
-        >>> existing_dt = pd.Timestamp('2025-12-22')
-        >>> to_datetime(existing_dt)  # Returns unchanged
-        Timestamp('2025-12-22 00:00:00')
+    Examples
+    --------
+    >>> # Standard conversion
+    >>> to_datetime('2026-02-08')
+    Timestamp('2026-02-08 00:00:00')
+    >>> # Explicit resolution
+    >>> to_datetime('2026-02-08', unit=DatetimeResolution.SECOND)
+    Timestamp('2026-02-08 00:00:00')
     """
     # If already datetime and no unit specified, return as-is
     if isinstance(value, pd.Timestamp):
@@ -103,21 +97,28 @@ def parse_datetime(
     """
     Extract datetime properties from a single Timestamp.
 
-    Args:
-        value: Timestamp to parse.
-        properties: DatetimeProperty flags specifying which properties to extract.
-            Use bitwise OR (|) to combine multiple properties.
+    Utilizes DatetimeProperty flags to determine which temporal components
+    to extract, including support for cyclical transformations (sine/cosine).
 
-    Returns:
-        Dictionary with lowercase property names as keys and extracted values.
+    Parameters
+    ----------
+    value : pd.Timestamp
+        The timestamp from which to extract properties.
+    properties : DatetimeProperty, default YEAR | MONTH | DAY
+        Flags specifying the components to extract. Combine multiple
+        properties using bitwise OR (|).
 
-    Examples:
-        >>> ts = pd.Timestamp("2025-12-22 14:30:45")
-        >>> parse_datetime(ts, DatetimeProperty.YEAR | DatetimeProperty.MONTH)
-        {'year': 2025, 'month': 12}
+    Returns
+    -------
+    dict of str to Any
+        A dictionary where keys are lowercase property names (e.g., 'hour',
+        'sin_hour') and values are the extracted temporal data.
 
-        >>> parse_datetime(ts, DatetimeProperty.HOUR | DatetimeProperty.SIN_HOUR)
-        {'hour': 14, 'sin_hour': 0.4067...}
+    Examples
+    --------
+    >>> ts = pd.Timestamp("2026-02-08 16:36:29")
+    >>> parse_datetime(ts, DatetimeProperty.HOUR | DatetimeProperty.SIN_HOUR)
+    {'hour': 16, 'sin_hour': -0.8660...}
     """
     result = {}
 
@@ -186,26 +187,39 @@ def parse_datetime_series(
     """
     Extract datetime properties from a Series of timestamps.
 
-    Uses vectorized pandas .dt accessor operations for efficient processing
-    of large datasets (millions of rows).
+    Uses vectorized pandas `.dt` accessor operations and NumPy for efficient
+    processing of large datasets (millions of rows).
 
-    Args:
-        series: Series of datetime values.
-        properties: DatetimeProperty flags specifying which properties to extract.
-            Use bitwise OR (|) to combine multiple properties.
+    Parameters
+    ----------
+    series : pd.Series
+        Series of datetime values to parse.
+    properties : DatetimeProperty, default YEAR | MONTH | DAY
+        Flags specifying which properties to extract. Combine multiple
+        properties using bitwise OR (|).
 
-    Returns:
-        Dictionary where keys are series index values and values are dictionaries
-        of extracted properties.
+    Returns
+    -------
+    dict of Any to dict
+        A dictionary where keys are the original Series index values and
+        values are dictionaries of extracted properties (e.g., {'year': 2025}).
 
-    Examples:
-        >>> s = pd.Series(
-        ...     [pd.Timestamp("2025-12-22"), pd.Timestamp("2025-12-23")],
-        ...     index=['a', 'b']
-        ... )
-        >>> result = parse_datetime_series(s, DatetimeProperty.YEAR | DatetimeProperty.MONTH)
-        >>> result['a']
-        {'year': 2025, 'month': 12}
+    Notes
+    -----
+    - This function is significantly more efficient than iterating over rows
+      for large datasets.
+    - Features such as 'sin_hour' and 'cos_hour' are calculated using
+      vectorized NumPy functions.
+
+    Examples
+    --------
+    >>> s = pd.Series(
+    ...     [pd.Timestamp("2026-02-08"), pd.Timestamp("2026-02-09")],
+    ...     index=['row1', 'row2']
+    ... )
+    >>> result = parse_datetime_series(s, DatetimeProperty.YEAR | DatetimeProperty.MONTH)
+    >>> result['row1']
+    {'year': 2026, 'month': 2}
     """
     # Cast series to datetime type for proper .dt accessor support
     # Avoid subscripted Series typing to maintain compatibility with pandas versions
@@ -278,14 +292,37 @@ def parse_datetime_series(
 
 
 def is_string_datetime(series: pd.Series, sample_size: int = 500) -> bool:
-    """Efficiently detect if a string series contains datetime data.
+    """
+    Efficiently detect if a string series contains datetime data.
 
-    - Only checks object-dtype (string-like) series
-    - Drops NA values and samples up to `sample_size`
-    - Parses sample via `pd.to_datetime(errors='coerce', cache=True, infer_datetime_format=True)`
-    - Returns True if >95% of non-null sample values parse successfully
+    A heuristic check that favors performance over strictness, primarily
+    intended for high-volume data profiling.
 
-    This is intended for heuristic detection and favors speed over strictness.
+    Parameters
+    ----------
+    series : pd.Series
+        The pandas Series to check. Only object-dtype (string-like)
+        series are evaluated.
+    sample_size : int, default 500
+        The maximum number of non-null values to sample for validation.
+
+    Returns
+    -------
+    bool
+        True if more than 95% of the sampled non-null values parse
+        successfully as datetimes, False otherwise.
+
+    Notes
+    -----
+    - This function skips non-object dtypes immediately to save processing time.
+    - It utilizes `pd.to_datetime` with `errors='coerce'` to statistically
+      evaluate the content of the sample.
+
+    Examples
+    --------
+    >>> s = pd.Series(["2026-02-08", "2026-02-09", "not-a-date"])
+    >>> is_string_datetime(s)
+    True
     """
     # Only check 'object' (string-like) columns
     if not pd.api.types.is_object_dtype(series):
@@ -307,23 +344,41 @@ def is_string_datetime(series: pd.Series, sample_size: int = 500) -> bool:
 def infer_string_datetime_format(
     series: pd.Series, sample_size: int = 500, min_success: float = 0.95
 ) -> str | None:
-    """Infer the dominant strptime format for a string Series of datetimes.
+    """
+    Infer the dominant strptime format for a string Series of datetimes.
 
-    Tries a curated list of common datetime formats against a sample of non-null
-    values. Returns the first format whose parse success rate exceeds `min_success`.
+    Iterates through a prioritized list of common formats to find a match
+    that satisfies the success threshold on a sample of the data.
 
-    Notes:
-    - This is heuristic and not guaranteed for mixed-format columns.
-    - Timezone and ISO-8601 variants are not fully covered.
-    - Prefer using the inferred format with `pd.to_datetime(..., format=fmt)` for speed.
+    Parameters
+    ----------
+    series : pd.Series
+        The string-like (object dtype) pandas Series to inspect.
+    sample_size : int, default 500
+        Maximum number of non-null values to test for format validation.
+    min_success : float, default 0.95
+        The minimum required success rate (0.0 to 1.0) to accept a format.
 
-    Args:
-        series: String-like pandas Series to inspect (object dtype).
-        sample_size: Number of non-null values to test (head of cleaned sample).
-        min_success: Minimum fraction of successful parses to accept a format.
+    Returns
+    -------
+    str or None
+        The detected strptime format string (e.g., "%Y-%m-%d %H:%M:%S")
+        or None if no dominant format is identified.
 
-    Returns:
-        Detected format string (e.g., "%Y-%m-%d %H:%M:%S") or None if not inferred.
+    Notes
+    -----
+    - This is a heuristic approach and may not be reliable for columns
+      containing multiple date formats.
+    - Leveraging the returned format with `pd.to_datetime(format=...)`
+      significantly improves conversion speed for large datasets.
+    - Candidate formats are retrieved in priority order from the
+      `DatetimeFormat` enum.
+
+    Examples
+    --------
+    >>> s = pd.Series(["2026-02-08 16:30", "2026-02-08 16:45"])
+    >>> infer_string_datetime_format(s)
+    '%Y-%m-%d %H:%M'
     """
     if not pd.api.types.is_object_dtype(series):
         return None
@@ -347,41 +402,41 @@ def infer_string_datetime_format(
 
 
 def resolve_date_ambiguity(sample_series: pd.Series) -> str:
-    """Resolve ambiguity between US_DATE (%m/%d/%Y) and EU_DATE (%d/%m/%Y) formats.
+    """
+    Resolve ambiguity between US_DATE (%m/%d/%Y) and EU_DATE (%d/%m/%Y) formats.
 
-    When dates are in ambiguous format (e.g., '01/02/2025' could be Jan 2 or Feb 1),
-    this function analyzes the numeric values to determine the most likely format.
+    Analyzes a sample of date strings to determine if the first or second
+    numeric component consistently exceeds 12, indicating its role as the day.
 
-    Strategy:
-    - If any first number > 12: Must be day (EU format)
-    - If any second number > 12: Must be month in first position (US format)
-    - Otherwise: Cannot determine (ambiguous)
+    Parameters
+    ----------
+    sample_series : pd.Series
+        A pandas Series containing date strings (e.g., 'MM/DD/YYYY').
+        Supports both '/' and '-' as separators.
 
-    Args:
-        sample_series: Series with date strings in format like 'MM/DD/YYYY' or 'DD/MM/YYYY'.
-            Supports both '/' and '-' as separators.
+    Returns
+    -------
+    str
+        A string indicating the resolved format:
+        - "US": Month-Day-Year format (%m/%d/%Y).
+        - "EU": Day-Month-Year format (%d/%m/%Y).
+        - "AMBIGUOUS": The sample does not contain values high enough to
+          distinguish between month and day.
 
-    Returns:
-        str: One of "US", "EU", or "AMBIGUOUS"
-             - "US": Format is %m/%d/%Y (month before day)
-             - "EU": Format is %d/%m/%Y (day before month)
-             - "AMBIGUOUS": Cannot determine from sample
+    Notes
+    -----
+    - The function uses regex to extract the first two numeric parts.
+    - It validates that the first component is <= 31 to prevent misidentifying
+      years as days in YYYY-MM-DD formats.
 
-    Examples:
-        >>> # Clearly EU (day 25 > 12)
-        >>> s = pd.Series(['25/01/2025', '13/02/2025'])
-        >>> resolve_date_ambiguity(s)
-        'EU'
-
-        >>> # Clearly US (month 12 in second position)
-        >>> s = pd.Series(['01/25/2025', '06/12/2025'])
-        >>> resolve_date_ambiguity(s)
-        'US'
-
-        >>> # Ambiguous
-        >>> s = pd.Series(['01/02/2025', '02/03/2025'])
-        >>> resolve_date_ambiguity(s)
-        'AMBIGUOUS'
+    Examples
+    --------
+    >>> s = pd.Series(['25/01/2026', '08/04/2026'])
+    >>> resolve_date_ambiguity(s)
+    'EU'
+    >>> s_ambig = pd.Series(['01/02/2026', '02/03/2026'])
+    >>> resolve_date_ambiguity(s_ambig)
+    'AMBIGUOUS'
     """
     # Extract the first two numeric parts using regex
     # e.g., '13/01/2025' -> ('13', '01'), '01-02-2025' -> ('01', '02')

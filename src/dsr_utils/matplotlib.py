@@ -1,10 +1,11 @@
 """Matplotlib helpers for computing artist and axis bounding boxes."""
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
+
 from matplotlib.artist import Artist
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.transforms import Bbox
-from matplotlib.axes import Axes
 
 if TYPE_CHECKING:
     from matplotlib.backend_bases import RendererBase
@@ -13,15 +14,30 @@ if TYPE_CHECKING:
 def get_artist_bbox(
     obj: Artist, transform_to: Union[Figure, Axes], renderer: "RendererBase"
 ) -> Bbox:
-    """Return an artist's bounding box in axes or figure coordinates.
+    """
+    Return an artist's bounding box in axes or figure coordinates.
 
-    Args:
-        obj: Matplotlib artist to measure.
-        transform_to: Target coordinate space (Figure or Axes).
-        renderer: Active renderer used for measurement.
+    This function calculates the window extent of an artist in pixels and
+    transforms it into the coordinate space of the target Figure or Axes.
 
-    Returns:
-        Bounding box in the target coordinate system.
+    Parameters
+    ----------
+    obj : Artist
+        The Matplotlib artist to measure (e.g., text, line, or patch).
+    transform_to : Figure or Axes
+        The target coordinate space for the resulting bounding box.
+    renderer : RendererBase
+        The active renderer used for measurement.
+
+    Returns
+    -------
+    Bbox
+        The bounding box transformed into the target coordinate system.
+
+    Raises
+    ------
+    ValueError
+        If the artist is not attached to a figure, making measurement impossible.
     """
     fig = obj.get_figure()
 
@@ -39,14 +55,23 @@ def get_artist_bbox(
 
 
 def get_axis_bbox(ax: Axes, renderer: "RendererBase") -> Bbox:
-    """Return an axis' bounding box in axes coordinates.
+    """
+    Return an axis' bounding box in axes coordinates.
 
-    Args:
-        ax: Target axis.
-        renderer: Active renderer used for measurement.
+    Calculates the extent of an entire Axes object and transforms it into
+    normalized axes coordinates.
 
-    Returns:
-        Bounding box in axes coordinates.
+    Parameters
+    ----------
+    ax : Axes
+        The target Matplotlib axis to measure.
+    renderer : RendererBase
+        The active renderer used for measurement.
+
+    Returns
+    -------
+    Bbox
+        The bounding box in normalized axes coordinates.
     """
     bbox_px = ax.get_window_extent(renderer=renderer)
     inv = ax.transAxes.inverted()

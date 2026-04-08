@@ -2,9 +2,16 @@
 dsr_utils: Generic utility functions for text, strings, and types.
 """
 
-from dsr_utils.datetime import parse_datetime, parse_datetime_series, to_datetime
-from dsr_utils.datetime import is_string_datetime
-from dsr_utils.datetime import infer_string_datetime_format, resolve_date_ambiguity
+from importlib.metadata import PackageNotFoundError, version
+
+from dsr_utils.datetime import (
+    infer_string_datetime_format,
+    is_string_datetime,
+    parse_datetime,
+    parse_datetime_series,
+    resolve_date_ambiguity,
+    to_datetime,
+)
 from dsr_utils.enums import (
     DatetimeErrors,
     DatetimeFormat,
@@ -12,34 +19,34 @@ from dsr_utils.enums import (
     DatetimeResolution,
 )
 from dsr_utils.formatting import (
-    TextAlignment,
-    FormatType,
-    CurrencySymbolPosition,
-    FormatConfig,
+    BoolFormat,
     CurrencyFormat,
-    PercentageFormat,
-    IntegerFormat,
-    FloatFormat,
-    ValueDescFormat,
+    CurrencySymbolPosition,
     DateTimeFormat,
     EnumFormat,
-    BoolFormat,
+    FloatFormat,
+    FormatConfig,
+    FormatType,
+    IntegerFormat,
+    PercentageFormat,
     StringFormat,
-    format_text,
-    format_label_value_pairs,
+    TextAlignment,
+    ValueDescFormat,
     format_as_grid,
-)
-from dsr_utils.strings import is_float_string, apply_tracking
-from dsr_utils.types import any_to_list
-from dsr_utils.tables import (
-    TableEdgeColor,
-    TableEdgeLinewidth,
-    TableColumnStyle,
-    TableColumn,
-    Table,
-    render_table,
+    format_label_value_pairs,
+    format_text,
 )
 from dsr_utils.matplotlib import get_artist_bbox, get_axis_bbox
+from dsr_utils.strings import apply_tracking, is_float_string
+from dsr_utils.tables import (
+    Table,
+    TableColumn,
+    TableColumnStyle,
+    TableEdgeColor,
+    TableEdgeLinewidth,
+    render_table,
+)
+from dsr_utils.types import any_to_list
 
 __all__ = [
     "DatetimeErrors",
@@ -81,4 +88,7 @@ __all__ = [
     "get_axis_bbox",
 ]
 
-__version__ = "0.0.4"
+try:
+    __version__ = version("dsr-utils")
+except PackageNotFoundError:
+    __version__ = "unknown"
