@@ -6,7 +6,12 @@ from typing import Any, cast
 import pandas as pd
 import numpy as np
 
-from dsr_utils.enums import DatetimeErrors, DatetimeFormat, DatetimeProperty, DatetimeResolution
+from dsr_utils.enums import (
+    DatetimeErrors,
+    DatetimeFormat,
+    DatetimeProperty,
+    DatetimeResolution,
+)
 
 
 def to_datetime(
@@ -145,9 +150,7 @@ def parse_datetime(
     if DatetimeProperty.IS_WEEKEND in properties:
         result["is_weekend"] = value.dayofweek >= 5
     if DatetimeProperty.IS_LEAP_YEAR in properties:
-        result["is_leap_year"] = (value.year % 4 == 0) and (
-            value.year % 100 != 0 or value.year % 400 == 0
-        )
+        result["is_leap_year"] = value.is_leap_year
     if DatetimeProperty.HOUR in properties:
         result["hour"] = value.hour
     if DatetimeProperty.MINUTE in properties:
@@ -210,6 +213,7 @@ def parse_datetime_series(
 
     # Vectorized extraction using pandas .dt accessor
     from typing import Any
+
     dt_accessor: Any = dt_series.dt
     extracted = {}
 
@@ -242,9 +246,7 @@ def parse_datetime_series(
     if DatetimeProperty.IS_WEEKEND in properties:
         extracted["is_weekend"] = dt_accessor.dayofweek >= 5
     if DatetimeProperty.IS_LEAP_YEAR in properties:
-        extracted["is_leap_year"] = (dt_accessor.year % 4 == 0) & (
-            (dt_accessor.year % 100 != 0) | (dt_accessor.year % 400 == 0)
-        )
+        extracted["is_leap_year"] = dt_accessor.is_leap_year
     if DatetimeProperty.HOUR in properties:
         extracted["hour"] = dt_accessor.hour
     if DatetimeProperty.MINUTE in properties:
@@ -260,21 +262,19 @@ def parse_datetime_series(
     if DatetimeProperty.COS_HOUR in properties:
         extracted["cos_hour"] = np.cos(2 * np.pi * dt_accessor.hour / 24)
     if DatetimeProperty.SIN_DAYOFWEEK in properties:
-        extracted["sin_dayofweek"] = np.sin(
-            2 * np.pi * dt_accessor.dayofweek / 7)
+        extracted["sin_dayofweek"] = np.sin(2 * np.pi * dt_accessor.dayofweek / 7)
     if DatetimeProperty.COS_DAYOFWEEK in properties:
-        extracted["cos_dayofweek"] = np.cos(
-            2 * np.pi * dt_accessor.dayofweek / 7)
+        extracted["cos_dayofweek"] = np.cos(2 * np.pi * dt_accessor.dayofweek / 7)
     if DatetimeProperty.SIN_MONTH in properties:
-        extracted["sin_month"] = np.sin(
-            2 * np.pi * (dt_accessor.month - 1) / 12)
+        extracted["sin_month"] = np.sin(2 * np.pi * (dt_accessor.month - 1) / 12)
     if DatetimeProperty.COS_MONTH in properties:
-        extracted["cos_month"] = np.cos(
-            2 * np.pi * (dt_accessor.month - 1) / 12)
+        extracted["cos_month"] = np.cos(2 * np.pi * (dt_accessor.month - 1) / 12)
 
     # Convert the dictionary of Series into a DataFrame, then export to dict
     # This is vastly more efficient than iterating through index (O(n) vs O(n²))
-    return cast(dict[Any, dict[str, Any]], pd.DataFrame(extracted).to_dict(orient='index'))
+    return cast(
+        dict[Any, dict[str, Any]], pd.DataFrame(extracted).to_dict(orient="index")
+    )
 
 
 def is_string_datetime(series: pd.Series, sample_size: int = 500) -> bool:
@@ -297,14 +297,16 @@ def is_string_datetime(series: pd.Series, sample_size: int = 500) -> bool:
         return False
 
     try:
-        parsed = pd.to_datetime(sample, errors='coerce', cache=True)
+        parsed = pd.to_datetime(sample, errors="coerce", cache=True)
         # If more than 95% of non-nulls parsed, it's likely datetime
         return float(parsed.notnull().mean()) > 0.95
     except Exception:
         return False
 
 
-def infer_string_datetime_format(series: pd.Series, sample_size: int = 500, min_success: float = 0.95) -> str | None:
+def infer_string_datetime_format(
+    series: pd.Series, sample_size: int = 500, min_success: float = 0.95
+) -> str | None:
     """Infer the dominant strptime format for a string Series of datetimes.
 
     Tries a curated list of common datetime formats against a sample of non-null
@@ -383,7 +385,7 @@ def resolve_date_ambiguity(sample_series: pd.Series) -> str:
     """
     # Extract the first two numeric parts using regex
     # e.g., '13/01/2025' -> ('13', '01'), '01-02-2025' -> ('01', '02')
-    parts = sample_series.astype(str).str.extract(r'(\d+)[/-](\d+)').dropna()
+    parts = sample_series.astype(str).str.extract(r"(\d+)[/-](\d+)").dropna()
 
     if parts.empty:
         return "AMBIGUOUS"
@@ -391,8 +393,9 @@ def resolve_date_ambiguity(sample_series: pd.Series) -> str:
     first_part = parts[0].astype(int)
     second_part = parts[1].astype(int)
 
-    # If the first number is > 12, it's almost certainly EU (DD/MM)
-    if (first_part > 12).any():
+    # If the first number is > 12, it's almost certainly EU (DD/MM).
+    # We check <= 31 to avoid misidentifying years (e.g. 2025 in YYYY-MM-DD) as days.
+    if ((first_part > 12) & (first_part <= 31)).any():
         return "EU"
 
     # If the second number is > 12, it's almost certainly US (MM/DD)

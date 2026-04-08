@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Fixed
+- `resolve_date_ambiguity` now correctly handles ISO-8601 dates (e.g., `2025-01-01`) by ensuring the first numeric part is <= 31 before identifying it as a day (EU format).
+
+### Refactor
+- Replaced manual leap year calculation with pandas built-in `.is_leap_year` property in `parse_datetime` and `parse_datetime_series`.
+
 ## [1.0.0] - 2026-02-08
 ### Breaking
 - Version reset to 1.0.0 to reflect breaking changes and non-backward-compatible updates.
