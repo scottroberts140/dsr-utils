@@ -7,16 +7,16 @@
 
 Utility functions and helpers for common data science tasks, including datetime parsing, formatting, tables, and plotting helpers.
 
-**Version 1.0.0**: This release is breaking and not backward-compatible with prior 0.x versions.
+**Version 1.3.0**: This release refactors `any_to_list` for type preservation and enhances support for NumPy 2.0 and Pandas 2.0.
 
 ## Features
 
-- **Datetime utilities**: Parse and enrich timestamps with pandas integration.
+- **Datetime utilities**: Parse and enrich timestamps with vectorized pandas integration.
 - **Formatting utilities**: Numeric, currency, percentage, and datetime formatters.
-- **Table helpers**: Lightweight table definitions and rendering helpers.
-- **Matplotlib helpers**: Bounding box utilities for layout and export.
-- **String utilities**: Text processing and manipulation helpers.
-- **Type utilities**: Lightweight type conversion helpers.
+- **Table helpers**: High-precision layout engine with pagination support.
+- **Matplotlib helpers**: Headless-friendly bounding box and renderer utilities.
+- **String utilities**: Recursive case conversion (snake, pascal, camel, etc.).
+- **Type utilities**: Robust standardization of scalars and collections into flat lists.
 
 ## Installation
 
@@ -27,39 +27,40 @@ pip install dsr-utils
 ## Usage
 
 ```python
-from dsr_utils import (
-	parse_datetime,
-	DateTimeFormat,
-	FloatFormat,
-	Table,
-	TableColumn,
-	render_table,
-)
+import pandas as pd
+from dsr_utils.datetime import parse_datetime
+from dsr_utils.formatting import FloatFormat
+from dsr_utils.tables import Table, TableColumn, TableColumnStyle, render_table
 
-# Datetime parsing (pandas integration)
-ts = parse_datetime("2025-10-01 12:34:56")
+# Datetime parsing with Pandas 2.0+ mixed-format support
+ts = pd.Timestamp("2025-10-01 12:34:56")
+# (Usage of parse_datetime utility here)
 
 # Formatting utilities
 fmt = FloatFormat(precision=2)
 print(fmt.format_value(1234.567))
 
-# Date/time formatting
-dt_fmt = DateTimeFormat(date_format="%Y-%m-%d", time_format="%H:%M")
-print(dt_fmt.format_value(ts))
-
-# Table helpers
+# Table helpers (v1.3.0 constructor requirements)
+df = pd.DataFrame({"Metric": ["Trips"], "Value": ["1,200"]})
+style = TableColumnStyle()
 table = Table(
-	columns=[TableColumn("metric"), TableColumn("value")],
-	rows=[{"metric": "rows", "value": 1234}],
+    data=df,
+    max_table_height=0.5,
+    mid_x=0.5,
+    top_y=0.8,
+    fontsize=11,
+    columns={
+        "Metric": TableColumn(detail_style=style, header_style=style),
+        "Value": TableColumn(detail_style=style, header_style=style)
+    }
 )
-render_table(table)
 ```
 
 ## Requirements
 
 - Python >= 3.10
-- numpy
-- pandas (required for datetime utilities)
+- numpy >= 2.0.0
+- pandas >= 2.0.0
 - matplotlib (required for matplotlib helpers)
 
 ## License
