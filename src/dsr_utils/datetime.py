@@ -334,7 +334,8 @@ def is_string_datetime(series: pd.Series, sample_size: int = 500) -> bool:
         return False
 
     try:
-        parsed = pd.to_datetime(sample, errors="coerce", cache=True)
+        # 'mixed' tells pandas to try different formats without warning for each
+        parsed = pd.to_datetime(sample, errors="coerce", cache=True, format="mixed")
         # If more than 95% of non-nulls parsed, it's likely datetime
         return float(parsed.notnull().mean()) > 0.95
     except Exception:

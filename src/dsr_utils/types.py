@@ -7,52 +7,49 @@ import numpy as np
 
 def any_to_list(a: Any) -> list[Any]:
     """
-    Convert various data types to a list representation.
-
-    Handles conversion from lists, NumPy arrays, scalars (int, float, str),
-    tuples, and dictionaries.
+    Convert various input types into a standardized flat list.
 
     Parameters
     ----------
     a : Any
-        The input value to convert into a list format.
+        The input to be converted. Supported types include scalars (int, float, str),
+        sequences (list, tuple, ndarray), and collections (set, dict, pd.Series).
 
     Returns
     -------
-    list of Any
-        A list representation of the input. Note that scalar values are
-        returned as single-element lists containing their string
-        representation, while tuples are returned as a nested list.
-
-    Notes
-    -----
-    - NumPy arrays are converted using the `.tolist()` method.
-    - Dictionary inputs result in a list of the dictionary's values.
-    - If the data type is unrecognized, a warning is printed and an
-      empty list is returned.
-
-    Examples
-    --------
-    >>> any_to_list(np.array([1, 2, 3]))
-    [1, 2, 3]
-    >>> any_to_list(42)
-    ['42']
-    >>> any_to_list({'a': 1, 'b': 2})
-    [1, 2]
-    >>> any_to_list((10, 20))
-    [[10, 20]]
+    list[Any]
+        A standardized list representation of the input. Returns an empty list
+        if the input is None.
     """
-    match a:
-        case list():
-            return a
-        case np.ndarray():
-            return a.tolist()
-        case int() | float() | str():
-            return [str(a)]
-        case tuple():
-            return [list(a)]
-        case dict():
-            return list(a.values())
-        case _:
-            print(f"Unrecognized data type: {type(a)}")
-            return []
+    if a is None:
+        return []
+
+    # Handle standard list directly (returning a shallow copy is safer)
+    if isinstance(a, list):
+        return a.copy()
+
+    # Handle Pandas Series and Index (convert to list)
+    if hasattr(a, "tolist") and callable(getattr(a, "tolist")):
+        return a.tolist()
+
+    # Handle NumPy arrays
+    if isinstance(a, np.ndarray):
+        return a.tolist()
+
+    # Handle other iterables (tuple, set, dict values)
+    # but exclude strings which are technically iterable
+    if isinstance(a, (tuple, set)):
+        return list(a)
+
+    if isinstance(a, dict):
+        return list(a.values())
+
+    # Handle scalars (str, int, float, etc.)
+    if isinstance(a, (str, int, float, np.number)):
+        return [a]
+
+    # Fallback for other objects
+    try:
+        return list(a)
+    except TypeError:
+        return [a]
