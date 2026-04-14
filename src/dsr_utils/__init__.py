@@ -36,6 +36,7 @@ from dsr_utils.formatting import (
     format_label_value_pairs,
     format_text,
 )
+from dsr_utils.hashing import calculate_file_hash, calculate_object_hash
 from dsr_utils.matplotlib import get_artist_bbox, get_axis_bbox
 from dsr_utils.strings import apply_tracking, is_float_string
 from dsr_utils.tables import (
@@ -86,6 +87,8 @@ __all__ = [
     "render_table",
     "get_artist_bbox",
     "get_axis_bbox",
+    "calculate_object_hash",
+    "calculate_file_hash",
 ]
 
 try:

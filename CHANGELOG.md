@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-04-14
+
+### Added
+
+* **Deterministic Object Hashing**: Integrated joblib.hash logic into a new hashing module to generate unique fingerprints for DataFrames, NumPy arrays, and other complex Python objects.
+* **Audit-Safe File Hashing**: Implemented chunked SHA-256 hashing for large raw data files, optimized to minimize memory overhead.
+* **Integrity Validation Suite**: Added utilities to compare memory-resident data against stored checksums, providing the mathematical foundation for the orchestrator's "Run Capsule" architecture.
+
+### Changed
+
+* **Project Documentation**: Standardized all module-level and function-level docstrings to the NumPy format to ensure technical clarity for machine learning development.
+
 ## [1.3.0] - 2026-04-08
 
 ### Added

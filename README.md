@@ -7,7 +7,7 @@
 
 Utility functions and helpers for common data science tasks, including datetime parsing, formatting, tables, and plotting helpers.
 
-**Version 1.3.0**: This release refactors `any_to_list` for type preservation and enhances support for NumPy 2.0 and Pandas 2.0.
+**Version 1.4.0**: This release introduces a comprehensive **hashing module** for deterministic object and file-level integrity verification. It provides the "Source of Truth" foundation for audit-safe machine learning pipelines.
 
 ## Features
 
@@ -17,6 +17,7 @@ Utility functions and helpers for common data science tasks, including datetime 
 - **Matplotlib helpers**: Headless-friendly bounding box and renderer utilities.
 - **String utilities**: Recursive case conversion (snake, pascal, camel, etc.).
 - **Type utilities**: Robust standardization of scalars and collections into flat lists.
+- **Hashing Utilities**: Generate deterministic fingerprints for pandas DataFrames, NumPy arrays, and large files using memory-efficient SHA-256 and joblib hashing.
 
 ## Installation
 
@@ -25,6 +26,8 @@ pip install dsr-utils
 ```
 
 ## Usage
+
+### General Usage
 
 ```python
 import pandas as pd
@@ -56,11 +59,31 @@ table = Table(
 )
 ```
 
+### Data Integrity & Hashing
+
+```python
+import pandas as pd
+from dsr_utils.hashing import calculate_object_hash, calculate_file_hash
+from pathlib import Path
+
+# Generate a deterministic hash for a DataFrame
+df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+df_hash = calculate_object_hash(df)
+print(f"DataFrame Fingerprint: {df_hash}")
+
+# Calculate hash for a raw data file without loading it entirely into memory
+# Ideal for large CSVs on memory-constrained systems like a Mac-mini
+file_path = Path("data/raw/adult.csv")
+file_hash = calculate_file_hash(file_path)
+print(f"File Fingerprint: {file_hash}")
+```
+
 ## Requirements
 
 - Python >= 3.10
 - numpy >= 2.0.0
 - pandas >= 2.0.0
+- joblib >= 1.4.0
 - matplotlib (required for matplotlib helpers)
 
 ## License
