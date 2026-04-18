@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-04-18
+
+### Added
+
+* **Dynamic Reflection Utility**: Introduced safe_call, a general-purpose function for executing callables with automatic parameter filtering.
+* **Signature Inspection**: Implemented inspect-based logic to programmatically identify valid keyword arguments for any Python function or class constructor.
+* **Config Debugging Support**: Added a return mechanism for "rejected" parameters, allowing developers to identify extraneous configuration keys that do not match a function's signature.
+
+### Changed
+
+* **Pandas 2.0+ Compatibility**: Updated `is_string_datetime` and `infer_string_datetime_format` to support the `string` extension dtype in addition to standard `object` dtypes.
+* **Heuristic Robustness**: Enhanced `is_string_datetime` to utilize `format="mixed"` for statistical evaluation of high-volume data profiling.
+* **Hydration Robustness**: Updated utility patterns to support passing a mixture of fixed arguments and filtered variable keyword arguments (**kwargs).
+
+### Fixed
+
+* **Format Inference Logic**: Resolved an issue where `infer_string_datetime_format` returned `None` for standard ISO date and datetime strings by correcting dtype guard clauses.
+
 ## [1.4.0] - 2026-04-14
 
 ### Added

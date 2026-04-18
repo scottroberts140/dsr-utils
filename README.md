@@ -7,7 +7,7 @@
 
 Utility functions and helpers for common data science tasks, including datetime parsing, formatting, tables, and plotting helpers.
 
-**Version 1.4.0**: This release introduces a comprehensive **hashing module** for deterministic object and file-level integrity verification. It provides the "Source of Truth" foundation for audit-safe machine learning pipelines.
+**Version 1.5.0**: Introduced a **reflection module** featuring `safe_call`, a dynamic utility for executing functions with automatic parameter filtering based on signature inspection.
 
 ## Features
 
@@ -18,6 +18,7 @@ Utility functions and helpers for common data science tasks, including datetime 
 - **String utilities**: Recursive case conversion (snake, pascal, camel, etc.).
 - **Type utilities**: Robust standardization of scalars and collections into flat lists.
 - **Hashing Utilities**: Generate deterministic fingerprints for pandas DataFrames, NumPy arrays, and large files using memory-efficient SHA-256 and joblib hashing.
+- **Reflection Utilities**: Programmatically inspect function signatures and safely execute callables by filtering incompatible keyword arguments.
 
 ## Installation
 
@@ -76,6 +77,28 @@ print(f"DataFrame Fingerprint: {df_hash}")
 file_path = Path("data/raw/adult.csv")
 file_hash = calculate_file_hash(file_path)
 print(f"File Fingerprint: {file_hash}")
+```
+
+### Dynamic Function Execution
+
+```python
+from dsr_utils.reflection import safe_call
+
+def process_data(data, mode="fast", verbose=False):
+    return f"Processing {data} in {mode} mode"
+
+# A dictionary containing both valid and invalid parameters
+raw_config = {
+    "mode": "thorough",
+    "verbose": True,
+    "unsupported_param": "ignore_me"
+}
+
+# safe_call filters the config and returns the result + rejected keys
+result, rejected = safe_call(process_data, raw_config, data="MyDataset")
+
+print(result)            # Output: Processing MyDataset in thorough mode
+print(rejected.keys())   # Output: dict_keys(['unsupported_param'])
 ```
 
 ## Requirements

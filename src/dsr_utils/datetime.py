@@ -325,7 +325,9 @@ def is_string_datetime(series: pd.Series, sample_size: int = 500) -> bool:
     True
     """
     # Only check 'object' (string-like) columns
-    if not pd.api.types.is_object_dtype(series):
+    if not pd.api.types.is_object_dtype(series) and not pd.api.types.is_string_dtype(
+        series
+    ):
         return False
 
     # Drop NAs and sample
@@ -381,7 +383,9 @@ def infer_string_datetime_format(
     >>> infer_string_datetime_format(s)
     '%Y-%m-%d %H:%M'
     """
-    if not pd.api.types.is_object_dtype(series):
+    if not (
+        pd.api.types.is_object_dtype(series) or pd.api.types.is_string_dtype(series)
+    ):
         return None
 
     sample = series.dropna().astype(str).str.strip().head(sample_size)

@@ -38,6 +38,7 @@ from dsr_utils.formatting import (
 )
 from dsr_utils.hashing import calculate_file_hash, calculate_object_hash
 from dsr_utils.matplotlib import get_artist_bbox, get_axis_bbox
+from dsr_utils.reflection import safe_call
 from dsr_utils.strings import apply_tracking, is_float_string
 from dsr_utils.tables import (
     Table,
@@ -89,6 +90,7 @@ __all__ = [
     "get_axis_bbox",
     "calculate_object_hash",
     "calculate_file_hash",
+    "safe_call",
 ]
 
 try:
