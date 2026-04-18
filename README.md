@@ -7,7 +7,7 @@
 
 Utility functions and helpers for common data science tasks, including datetime parsing, formatting, tables, and plotting helpers.
 
-**Version 1.5.0**: Introduced a **reflection module** featuring `safe_call`, a dynamic utility for executing functions with automatic parameter filtering based on signature inspection.
+**Version 1.6.0**: Enhanced the **reflection module** with a manual bypass mode (`valid_params`) to support strict parameter filtering for functions utilizing `**kwargs` passthrough.
 
 ## Features
 
@@ -100,6 +100,34 @@ result, rejected = safe_call(process_data, raw_config, data="MyDataset")
 print(result)            # Output: Processing MyDataset in thorough mode
 print(rejected.keys())   # Output: dict_keys(['unsupported_param'])
 ```
+
+### Advanced Reflection: Manual Filtering
+
+For functions that use `**kwargs` in their signature (like `json.load` or `pd.read_parquet`), standard reflection cannot identify invalid parameters. In these cases, you can provide an explicit set of `valid_params` to bypass reflection and enforce strict filtering.
+
+```python
+from dsr_utils.reflection import safe_call
+
+# Example: pd.read_parquet has **kwargs, so we provide a strict set
+PARQUET_READ_PARAMS = {"path", "engine", "columns", "storage_options"}
+
+raw_config = {
+    "columns": ["id", "value"],
+    "fake_param": "invalid"
+}
+
+# safe_call uses valid_params as the ground truth instead of inspection
+result, rejected = safe_call(
+    pd.read_parquet, 
+    raw_config, 
+    valid_params=PARQUET_READ_PARAMS, 
+    path="data.parquet"
+)
+
+print(rejected)  # Output: {'fake_param': 'invalid'}
+```
+
+**Note on Conflict Resolution**: If a parameter in your config dictionary conflicts with a value passed via `**fixed_kwargs`, the value in `fixed_kwargs` takes precedence, and the original value is moved to the `rejected` dictionary for visibility.
 
 ## Requirements
 

@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0] - 2026-04-18
+
+### Added
+
+* **Manual Parameter Filtering in `safe_call`**: Introduced the `valid_params` argument to `safe_call`, allowing users to provide an explicit set of accepted keyword arguments.
+* **Bypass Reflection Mode**: When `valid_params` is provided, the utility bypasses standard `inspect.signature` reflection to handle functions with catch-all `**kwargs` signatures (e.g., `json.load` or `pd.read_parquet`).
+* **Enhanced Conflict Resolution**: Refined the logic to ensure that any parameters passed in the `params` dictionary which conflict with `**fixed_kwargs` are automatically moved to the `rejected` dictionary, preventing "multiple values for keyword argument" errors.
+
+### Changed
+
+* **Internal Reflection Logic**: Updated `safe_call` to accurately detect `VAR_KEYWORD` (`**kwargs`) in function signatures to prevent unnecessary filtering when a function is designed to be variadic.
+
+### Fixed
+
+* Resolved an issue where `safe_call` would pass invalid parameters to functions that utilize internal passthrough logic (like `json.load` passing to `JSONDecoder`), which previously caused `TypeError` exceptions despite passing reflection checks.
+
 ## [1.5.0] - 2026-04-18
 
 ### Added

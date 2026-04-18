@@ -3,7 +3,10 @@ from typing import Any, Callable, Tuple
 
 
 def safe_call(
-    func: Callable, params: dict[str, Any], **fixed_kwargs
+    func: Callable,
+    params: dict[str, Any],
+    valid_params: set[str] | None = None,
+    **fixed_kwargs,
 ) -> Tuple[Any, dict[str, Any]]:
     """
     Call a function using only the compatible parameters from a provided dictionary.
@@ -13,6 +16,9 @@ def safe_call(
     to prevent `TypeError` exceptions caused by unexpected keyword arguments
     when switching between different underlying loaders or processors.
 
+    If valid_params is provided, it bypasses reflection and uses the
+    set as the ground truth for filtering.
+
     Parameters
     ----------
     func : Callable
@@ -20,6 +26,9 @@ def safe_call(
     params : dict[str, Any]
         A dictionary of potential keyword arguments to filter and pass to the
         function.
+    valid_params : set[str] | None
+        An optional set of valid keyword arguments. If provided, reflection
+        is bypassed.
     **fixed_kwargs : Any
         Key-value pairs that must be passed to the function regardless of
         filtering, such as file paths or mandatory buffer objects.
@@ -40,19 +49,23 @@ def safe_call(
     This function uses `inspect.signature` to perform reflection on the target
     callable.
     """
-    sig = inspect.signature(func)
-    valid_keys = sig.parameters.keys()
-
-    # Identify which parameters the function can actually receive
-    has_kwargs = any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values())
-
-    if has_kwargs:
-        # If the function accepts **kwargs, nothing is invalid
-        accepted = params.copy()
-        rejected = {}
+    if valid_params is not None:
+        accepted = {k: v for k, v in params.items() if k in valid_params}
+        rejected = {k: v for k, v in params.items() if k not in valid_params}
     else:
-        accepted = {k: v for k, v in params.items() if k in valid_keys}
-        rejected = {k: v for k, v in params.items() if k not in valid_keys}
+        sig = inspect.signature(func)
+        valid_keys = sig.parameters.keys()
+
+        # Identify which parameters the function can actually receive
+        has_kwargs = any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values())
+
+        if has_kwargs:
+            # If the function accepts **kwargs, nothing is invalid
+            accepted = params.copy()
+            rejected = {}
+        else:
+            accepted = {k: v for k, v in params.items() if k in valid_keys}
+            rejected = {k: v for k, v in params.items() if k not in valid_keys}
 
     # --- Conflict Resolution ---
     # Remove any keys from 'accepted' that are already in 'fixed_kwargs'
