@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 
 * **Manual Parameter Filtering in `safe_call`**: Introduced the `valid_params` argument to `safe_call`, allowing users to provide an explicit set of accepted keyword arguments.
 * **Bypass Reflection Mode**: When `valid_params` is provided, the utility bypasses standard `inspect.signature` reflection to handle functions with catch-all `**kwargs` signatures (e.g., `json.load` or `pd.read_parquet`).
-* **Enhanced Conflict Resolution**: Refined the logic to ensure that any parameters passed in the `params` dictionary which conflict with `**fixed_kwargs` are automatically moved to the `rejected` dictionary, preventing "multiple values for keyword argument" errors.
+* **Enhanced Conflict Resolution**: Parameters in the `params` dictionary that overlap with `fixed_kwargs` are now explicitly moved to the `rejected` dictionary to ensure they do not cause `TypeError` while remaining visible for debugging.
 
 ### Changed
 

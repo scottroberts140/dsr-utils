@@ -108,7 +108,7 @@ For functions that use `**kwargs` in their signature (like `json.load` or `pd.re
 ```python
 from dsr_utils.reflection import safe_call
 
-# Example: pd.read_parquet has **kwargs, so we provide a strict set
+# Example 1: pd.read_parquet has **kwargs, so we provide a strict set
 PARQUET_READ_PARAMS = {"path", "engine", "columns", "storage_options"}
 
 raw_config = {
@@ -125,6 +125,17 @@ result, rejected = safe_call(
 )
 
 print(rejected)  # Output: {'fake_param': 'invalid'}
+
+# Example 2:
+# 'mode' is in valid_params, but 'fixed_kwargs' (mode="safe") will take priority.
+# The value "thorough" will be moved to the rejected dictionary.
+result, rejected = safe_call(
+    process_data, 
+    raw_config, 
+    valid_params={"mode", "verbose"}, 
+    data="MyDataset",
+    mode="safe"
+)
 ```
 
 **Note on Conflict Resolution**: If a parameter in your config dictionary conflicts with a value passed via `**fixed_kwargs`, the value in `fixed_kwargs` takes precedence, and the original value is moved to the `rejected` dictionary for visibility.

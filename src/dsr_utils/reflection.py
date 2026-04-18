@@ -50,8 +50,20 @@ def safe_call(
     callable.
     """
     if valid_params is not None:
-        accepted = {k: v for k, v in params.items() if k in valid_params}
-        rejected = {k: v for k, v in params.items() if k not in valid_params}
+        accepted = {}
+        rejected = {}
+
+        for k, v in params.items():
+            # Skip any keys that are already defined as mandatory fixed_kwargs
+            if k in fixed_kwargs:
+                rejected[k] = v  # Move superseded value to rejected
+                continue
+
+            # Sort remaining parameters based on the valid_params set
+            if k in valid_params:
+                accepted[k] = v
+            else:
+                rejected[k] = v
     else:
         sig = inspect.signature(func)
         valid_keys = sig.parameters.keys()

@@ -88,3 +88,45 @@ class TestSafeCall:
         # but safe_call should still pass it through if it's in the signature.
         with pytest.raises(TypeError):
             safe_call(simple_func, params, a=1)
+
+
+class TestSafeCallUpdates:
+    # A strict function for testing standard reflection
+    def sample_func(self, a, b, c=10):
+        return a + b + c
+
+    def test_valid_params_override(self):
+        """Verify that valid_params bypasses reflection and filters strictly."""
+        params = {"a": 1, "b": 5, "extra": 2}
+        result, rejected = safe_call(self.sample_func, params, valid_params={"a"}, b=5)
+
+        assert result == 16
+        assert "extra" in rejected
+
+    def test_valid_params_with_fixed_kwargs(self):
+        """Verify that fixed_kwargs are always passed, regardless of valid_params."""
+        params = {"a": 1, "b": 5}
+
+        # Even if 'b' isn't in valid_params, it is accepted because it is a fixed_kwarg.
+        result, rejected = safe_call(self.sample_func, params, valid_params={"a"}, b=20)
+
+        # result is 31 (a=1 from params, b=20 from fixed_kwargs, c=10 default)
+        assert result == 31
+        assert rejected["b"] == 5
+
+    def test_conflict_resolution_fixed_kwargs(self):
+        """Verify fixed_kwargs supersede params and move them to rejected."""
+        params = {"a": 1, "b": 2}
+        # 'b' is provided in params but overridden in fixed_kwargs
+        result, rejected = safe_call(self.sample_func, params, b=10)
+
+        assert result == 21  # a=1, b=10, c=10
+        assert rejected["b"] == 2  # The original value from 'params'
+
+    def test_standard_reflection_unaffected(self):
+        """Ensure standard reflection still works when valid_params is None."""
+        params = {"a": 1, "b": 2, "invalid": 99}
+        result, rejected = safe_call(self.sample_func, params)
+
+        assert result == 13
+        assert "invalid" in rejected
