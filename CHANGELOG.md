@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0] - 2026-04-20
+
+### Added
+
+* **Cloud Path Hashing Support**: `calculate_file_hash` now accepts cloud-backed URIs and path objects in addition to local filesystem paths.
+* **CloudPath Dependency**: Added `cloudpathlib` as a runtime dependency to normalize and read local and remote paths through one interface.
+
+### Changed
+
+* **Hashing Documentation**: Updated the README hashing example to demonstrate both local-path and cloud-URI usage.
+
+### Tests
+
+* Added dedicated hashing tests covering local files, cloud-style paths, and missing-file behavior.
+
 ## [1.6.0] - 2026-04-18
 
 ### Added

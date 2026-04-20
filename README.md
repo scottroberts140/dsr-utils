@@ -77,6 +77,10 @@ print(f"DataFrame Fingerprint: {df_hash}")
 file_path = Path("data/raw/adult.csv")
 file_hash = calculate_file_hash(file_path)
 print(f"File Fingerprint: {file_hash}")
+
+# The same helper also supports cloud-backed URIs and paths handled by cloudpathlib
+cloud_file_hash = calculate_file_hash("s3://my-bucket/data/raw/adult.csv")
+print(f"Cloud File Fingerprint: {cloud_file_hash}")
 ```
 
 ### Dynamic Function Execution
