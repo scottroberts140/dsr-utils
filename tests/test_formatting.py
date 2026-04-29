@@ -3,8 +3,9 @@
 from datetime import datetime
 
 import pytest
-
 from dsr_utils.formatting import (
+    BoolFormat,
+    BoolRepresentation,
     DataScale,
     DateTimeFormat,
     NumericScale,
@@ -141,3 +142,34 @@ class TestFormattingUtilities:
         assert "C" in lines[0]
         assert lines[1].startswith("B")
         assert "D" in lines[1]
+
+    def test_bool_format_new_representations(self):
+        """Verify ON/OFF and CHECK/CROSS bool display modes."""
+        on_off_fmt = BoolFormat(representation=BoolRepresentation.ON_OFF)
+        check_cross_fmt = BoolFormat(representation=BoolRepresentation.CHECK_CROSS)
+
+        assert on_off_fmt.format_value(True) == "On"
+        assert on_off_fmt.format_value(False) == "Off"
+        assert check_cross_fmt.format_value(True) == "✓"
+        assert check_cross_fmt.format_value(False) == "✗"
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("True", "True"),
+            ("true", "True"),
+            ("YES", "True"),
+            ("1", "True"),
+            ("on", "True"),
+            ("False", "False"),
+            ("false", "False"),
+            ("NO", "False"),
+            ("0", "False"),
+            ("off", "False"),
+            ("", "False"),
+        ],
+    )
+    def test_bool_format_string_coercion(self, value, expected):
+        """Ensure common truthy/falsey strings are parsed predictably."""
+        fmt = BoolFormat(representation=BoolRepresentation.TRUE_FALSE)
+        assert fmt.format_value(value) == expected

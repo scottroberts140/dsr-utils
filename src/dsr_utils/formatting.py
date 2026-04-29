@@ -338,11 +338,13 @@ class DataScale(Enum):
 
 
 class BoolRepresentation(Enum):
-    """Display styles for boolean formatting (True/False, Yes/No, 1/0)."""
+    """Display styles for boolean formatting."""
 
     TRUE_FALSE = auto()
     YES_NO = auto()
     ZERO_ONE = auto()
+    ON_OFF = auto()
+    CHECK_CROSS = auto()
 
 
 class FormatConfig(ABC):
@@ -1628,7 +1630,8 @@ class BoolFormat(FormatConfig):
     fallback : str, default "-"
         String returned when the input value is None.
     representation : BoolRepresentation, default TRUE_FALSE
-        The display style to use (e.g., True/False, Yes/No, or 1/0).
+        The display style to use (e.g., True/False, Yes/No, 1/0,
+        On/Off, or checkmark/cross symbols).
 
     Examples
     --------
@@ -1638,6 +1641,9 @@ class BoolFormat(FormatConfig):
     >>> fmt_num = BoolFormat(representation=BoolRepresentation.ZERO_ONE)
     >>> fmt_num.format_value(False)
     '0'
+    >>> fmt_symbols = BoolFormat(representation=BoolRepresentation.CHECK_CROSS)
+    >>> fmt_symbols.format_value(True)
+    '✓'
     """
 
     @property
@@ -1664,8 +1670,23 @@ class BoolFormat(FormatConfig):
         width = self.width if self.width is not None else ""
         self._fmt = f"{align}{width}"
 
+    @staticmethod
+    def _coerce_bool(val: Any) -> bool:
+        """Coerce common string and numeric forms into deterministic booleans."""
+        if isinstance(val, bool):
+            return val
+
+        if isinstance(val, str):
+            normalized = val.strip().lower()
+            if normalized in {"true", "t", "yes", "y", "1", "on"}:
+                return True
+            if normalized in {"false", "f", "no", "n", "0", "off", ""}:
+                return False
+
+        return bool(val)
+
     def _get_formatted_value(self, val: Any) -> str:
-        bool_val = bool(val)
+        bool_val = self._coerce_bool(val)
         display_str = ""
 
         match self.representation:
@@ -1675,6 +1696,10 @@ class BoolFormat(FormatConfig):
                 display_str = "Yes" if bool_val else "No"
             case BoolRepresentation.ZERO_ONE:
                 display_str = "1" if bool_val else "0"
+            case BoolRepresentation.ON_OFF:
+                display_str = "On" if bool_val else "Off"
+            case BoolRepresentation.CHECK_CROSS:
+                display_str = "✓" if bool_val else "✗"
             case _:
                 display_str = str(bool_val)
 
