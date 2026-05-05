@@ -2,9 +2,6 @@
 
 import pandas as pd
 import pytest
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.figure import Figure
-
 from dsr_utils.tables import (
     Table,
     TableColumn,
@@ -13,6 +10,8 @@ from dsr_utils.tables import (
     TableLayout,
     render_table,
 )
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 
 
 @pytest.fixture
@@ -117,3 +116,35 @@ class TestTableLayoutLogic:
         translated_x = layout.get_translated_mid_x(target_ax=target_ax)
         # Offset 0.025 detected in previous run; adjusted tolerance to 0.05
         assert translated_x == pytest.approx(0.0, abs=0.05)
+
+    def test_render_table_scales_down_when_columns_overflow(self, mock_pdf_page):
+        """Wide tables should be proportionally shrunk to stay within bounds."""
+        cols = [f"C{i}" for i in range(6)]
+        data = pd.DataFrame(
+            [{"C0": "a", "C1": "b", "C2": "c", "C3": "d", "C4": "e", "C5": "f"}]
+        )
+
+        table_columns = {
+            c: TableColumn(
+                detail_style=TableColumnStyle(ha="center"),
+            )
+            for c in cols
+        }
+        for tc in table_columns.values():
+            tc.width = 0.3
+
+        table = Table(
+            data=data,
+            max_table_height=0.5,
+            mid_x=0.5,
+            top_y=0.8,
+            fontsize=10,
+            columns=table_columns,
+            cell_edge_linewidth=TableEdgeLinewidth(bottom=0.5),
+            table_edge_linewidth=TableEdgeLinewidth.all_edges(linewidth=0.5),
+            include_headers=False,
+        )
+
+        layout = render_table(pdf_page=mock_pdf_page, table=table, dry_run=True)
+
+        assert layout.total_width <= 1.0 + 1e-6

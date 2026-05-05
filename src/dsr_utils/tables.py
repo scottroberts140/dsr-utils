@@ -2030,6 +2030,8 @@ def render_table(
     -----
     - Implements sophisticated column width resolution, supporting fixed widths,
       proportional maximums, and full-axis expansion.
+        - If computed column widths exceed available horizontal space, widths are
+            scaled down proportionally to fit within axis bounds and table padding.
     - Automatically manages "continuation pages," adjusting the top-y position
       for tables that span across multiple report pages.
     - If `table.data` is empty, renders a "No data to display" placeholder
@@ -2044,9 +2046,9 @@ def render_table(
         canvas: Any = fig.canvas
         renderer = canvas.get_renderer()
 
-    assert (
-        renderer is not None
-    ), "Renderer must be initialized before calling _calc_metrics"
+    assert renderer is not None, (
+        "Renderer must be initialized before calling _calc_metrics"
+    )
 
     ax.axis("off")
 
@@ -2077,6 +2079,18 @@ def render_table(
 
     va_padding_fraction = get_ax_fraction_for_pts(
         table._row_height_padding, horizontal=False
+    )
+    table_left_padding_fraction = get_ax_fraction_for_pts(
+        pts=table.table_edge_padding[0], horizontal=True
+    )
+    table_right_padding_fraction = get_ax_fraction_for_pts(
+        pts=table.table_edge_padding[1], horizontal=True
+    )
+    table_top_padding_fraction = get_ax_fraction_for_pts(
+        pts=table.table_edge_padding[2], horizontal=False
+    )
+    table_bottom_padding_fraction = get_ax_fraction_for_pts(
+        pts=table.table_edge_padding[3], horizontal=False
     )
 
     _calc_metrics(
@@ -2145,24 +2159,45 @@ def render_table(
         left_w = total_w / 2.0
 
     right_w = total_w - left_w
+
+    # Prevent horizontal overflow by proportionally shrinking all column widths.
+    # This keeps wide tables (e.g., many anomaly context columns) inside margins.
+    ax_width = get_artist_bbox(obj=ax, transform_to=ax, renderer=renderer).width
+    available_left = max(table.mid_x - table_left_padding_fraction, 0.0)
+    available_right = max(
+        ax_width - table.mid_x - table_right_padding_fraction,
+        0.0,
+    )
+
+    scale_left = available_left / left_w if left_w > 0.0 else 1.0
+    scale_right = available_right / right_w if right_w > 0.0 else 1.0
+    width_scale = min(1.0, scale_left, scale_right)
+
+    if width_scale < 1.0:
+        for c in table.columns.values():
+            c.width *= width_scale
+
+        total_w = sum(c.width for c in table.columns.values())
+
+        if table.center_at_col is not None:
+            left_w = 0.0
+            col_list = table.data.columns.to_list()
+
+            for col in col_list:
+                if col == table.center_at_col:
+                    break
+
+                left_w += table.columns[col].width
+        else:
+            left_w = total_w / 2.0
+
+        right_w = total_w - left_w
+
     left_x = table.mid_x - left_w
     right_x = table.mid_x + right_w
     remaining_row_count = total_row_count
     y_pos = table.top_y
     row_iloc = 0
-
-    table_left_padding_fraction = get_ax_fraction_for_pts(
-        pts=table.table_edge_padding[0], horizontal=True
-    )
-    table_right_padding_fraction = get_ax_fraction_for_pts(
-        pts=table.table_edge_padding[1], horizontal=True
-    )
-    table_top_padding_fraction = get_ax_fraction_for_pts(
-        pts=table.table_edge_padding[2], horizontal=False
-    )
-    table_bottom_padding_fraction = get_ax_fraction_for_pts(
-        pts=table.table_edge_padding[3], horizontal=False
-    )
 
     table._table_edge_padding_fraction = (
         table_left_padding_fraction,

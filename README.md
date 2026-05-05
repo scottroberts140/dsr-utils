@@ -14,6 +14,7 @@ Utility functions and helpers for common data science tasks, including datetime 
 - **Datetime utilities**: Parse and enrich timestamps with vectorized pandas integration.
 - **Formatting utilities**: Numeric, currency, percentage, and datetime formatters.
 - **Table helpers**: High-precision layout engine with pagination support.
+- **Wide-table auto-fit**: Oversized table layouts are proportionally scaled to stay within canvas/page margins.
 - **Matplotlib helpers**: Headless-friendly bounding box and renderer utilities.
 - **String utilities**: Recursive case conversion (snake, pascal, camel, etc.).
 - **Type utilities**: Robust standardization of scalars and collections into flat lists.

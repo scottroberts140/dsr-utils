@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.1] - 2026-05-05
+
+### Changed
+
+* **Table Width Overflow Auto-Fit**: `render_table` now proportionally scales column widths down when a computed layout exceeds the available horizontal axis space (including table edge padding). This prevents wide tables from spilling past page margins while preserving column proportions.
+
+### Tests
+
+* Added a regression test verifying that oversized multi-column tables are automatically shrunk to fit canvas bounds.
+
 ## [1.7.0] - 2026-04-20
 
 ### Added
