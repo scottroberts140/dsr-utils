@@ -7,7 +7,7 @@
 
 Utility functions and helpers for common data science tasks, including datetime parsing, formatting, tables, and plotting helpers.
 
-**Version 1.6.0**: Enhanced the **reflection module** with a manual bypass mode (`valid_params`) to support strict parameter filtering for functions utilizing `**kwargs` passthrough.
+**Version 1.7.2**: Added deterministic cell-level shrink-to-fit and border-safe edge rendering for compact, multi-page table layouts.
 
 ## Features
 
@@ -15,6 +15,8 @@ Utility functions and helpers for common data science tasks, including datetime 
 - **Formatting utilities**: Numeric, currency, percentage, and datetime formatters.
 - **Table helpers**: High-precision layout engine with pagination support.
 - **Wide-table auto-fit**: Oversized table layouts are proportionally scaled to stay within canvas/page margins.
+- **Cell shrink-to-fit**: Detail-cell text automatically scales down when measured content would exceed available inner width.
+- **Border-safe rendering**: Outer table borders remain visible even when layouts land near axis boundaries.
 - **Matplotlib helpers**: Headless-friendly bounding box and renderer utilities.
 - **String utilities**: Recursive case conversion (snake, pascal, camel, etc.).
 - **Type utilities**: Robust standardization of scalars and collections into flat lists.

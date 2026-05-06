@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.2] - 2026-05-06
+
+### Added
+
+* **Cell-Level Shrink-to-Fit**: Added deterministic per-cell shrink-to-fit in table detail rows so long values scale down to remain inside cell bounds.
+
+### Changed
+
+* **Measured Width Floor**: Table metric calculation now enforces a final width floor from rendered header/detail text measurements, reducing late-stage clipping in compact layouts.
+* **Axis-Aware Re-Scaling**: `render_table_from_page_layout` now refreshes renderer context and preserves width scaling correctness when rendering into alternate axes and continuation pages.
+
+### Fixed
+
+* **Right Border Visibility**: Adjusted edge-segment boundary handling to prevent outer border clipping at axis limits (notably the right border in side-by-side layouts).
+* **Proportional Cap Redistribution**: Corrected proportional-width cap bookkeeping and redistribution behavior so compact tables remain stable while honoring fit constraints.
+
 ## [1.7.1] - 2026-05-05
 
 ### Changed

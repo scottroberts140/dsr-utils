@@ -4,7 +4,17 @@ from __future__ import annotations
 
 import textwrap
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Hashable, List, Literal, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Hashable,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
 import matplotlib.axes
 import pandas as pd
@@ -1061,6 +1071,8 @@ class TableLayout:
         orig_axis_width = orig_axis_bounds.width
         scale_axis_bounds = ax.get_window_extent()
         scale_axis_width = scale_axis_bounds.width
+        # Widths are stored in axis-fraction units. Moving to a narrower axis
+        # requires a larger fraction for the same rendered text width.
         width_scale = orig_axis_width / scale_axis_width
 
         for _, tc in self.table.columns.items():
@@ -1349,6 +1361,14 @@ def _add_edge_segments(
       large tables, such as the Data Anomaly Log.
     """
 
+    # Lines that land exactly on 0/1 axis boundaries can be partially clipped
+    # by Matplotlib, which may hide outer borders (notably the right edge).
+    edge_inset = 0.0015
+    left_x = min(max(left_x, edge_inset), 1.0 - edge_inset)
+    right_x = min(max(right_x, edge_inset), 1.0 - edge_inset)
+    top_y = min(max(top_y, edge_inset), 1.0 - edge_inset)
+    bottom_y = min(max(bottom_y, edge_inset), 1.0 - edge_inset)
+
     edges = [
         (edge_color.top, linewidth.top, [(left_x, top_y), (right_x, top_y)]),
         (edge_color.left, linewidth.left, [(left_x, top_y), (left_x, bottom_y)]),
@@ -1630,6 +1650,58 @@ def _calc_metrics(
         if max_h_for_this_row > table.detail_row_height_fraction:
             table._row_height_exceptions[row_idx] = max_h_for_this_row
 
+    # Final width floor: ensure each column is at least as wide as the
+    # widest rendered text in that column (header or detail) at base sizing.
+    width_buffer = get_ax_fraction_for_pts(pts=3.0, horizontal=True)
+    for col in col_names:
+        tc = table.columns[col]
+        w_pad = tc.lpad_fraction + tc.rpad_fraction
+        min_required_width = tc.width
+
+        if table.include_headers:
+            header_style = (
+                tc.header_style if tc.header_style is not None else tc.detail_style
+            )
+            temp_text.set_text(str(col))
+            temp_text.set(
+                **_text_kwargs_from_style(
+                    style=header_style, default_font_size=table.fontsize
+                )
+            )
+            header_w, _ = _calc_text_dim(
+                text=temp_text,
+                ax=ax,
+                renderer=renderer,
+                w_pad=w_pad,
+                h_pad=0.0,
+            )
+            if header_w > min_required_width:
+                min_required_width = header_w
+
+        for cell_raw in table.data[col]:
+            cell_text = str(cell_raw)
+            if tc.max_width_chars is not None and len(cell_text) > tc.max_width_chars:
+                cell_text = textwrap.fill(cell_text, width=tc.max_width_chars)
+
+            temp_text.set_text(cell_text)
+            for cs in tc.unique_detail_sizing_styles:
+                temp_text.set(
+                    **_text_kwargs_from_style(
+                        style=cs, default_font_size=table.fontsize
+                    )
+                )
+                cell_w, _ = _calc_text_dim(
+                    text=temp_text,
+                    ax=ax,
+                    renderer=renderer,
+                    w_pad=w_pad,
+                    h_pad=0.0,
+                )
+                if cell_w > min_required_width:
+                    min_required_width = cell_w
+
+        tc.width = min_required_width + width_buffer
+
     temp_text.remove()
 
 
@@ -1698,6 +1770,8 @@ def _render_row(
     segments_by_style: dict[tuple[str, float], list[list[tuple[float, float]]]],
     is_first_row: bool = False,
     is_last_row: bool = False,
+    renderer: Optional[RendererBase] = None,
+    allow_shrink_to_fit: bool = True,
 ) -> None:
     """
     Render a single table row into the provided axis.
@@ -1828,6 +1902,64 @@ def _render_row(
             **kwargs,
         )
 
+        if renderer is not None and allow_shrink_to_fit:
+            # Cell-level shrink-to-fit: reduce font size only for overflowing
+            # text so borders remain visible without widening the whole table.
+            cell_inner_width = (
+                tc.scaled_width
+                - tc.lpad_fraction
+                - tc.rpad_fraction
+                - table_left_edge_padding_fraction
+                - table_right_edge_padding_fraction
+            )
+            if cell_inner_width > 0.0:
+                # Reserve a tiny horizontal safety buffer so right borders do
+                # not get visually crowded by near-exact text fits.
+                safety_pad = ax_fraction_for_fig_pts(
+                    fig=cast(Figure, ax.figure), ax=ax, pts=1.5, horizontal=True
+                )
+                target_inner_width = max(0.0, cell_inner_width - safety_pad)
+                text_bbox = get_artist_bbox(
+                    obj=text_obj, transform_to=ax, renderer=renderer
+                )
+                # Deterministic fit: if the measured text exceeds available
+                # width, directly compute a reduced font size from width ratio.
+                target_fit_ratio = 0.90
+                desired_width = target_inner_width * target_fit_ratio
+
+                if (
+                    target_inner_width > 0.0
+                    and text_bbox.width > 0.0
+                    and text_bbox.width > desired_width
+                ):
+                    start_font_size = float(text_obj.get_fontsize())
+                    min_font_size = max(4.0, start_font_size - 5.0)
+
+                    scale = desired_width / text_bbox.width
+                    current_font_size = min(
+                        start_font_size,
+                        max(min_font_size, start_font_size * scale),
+                    )
+                    text_obj.set_fontsize(current_font_size)
+                    text_bbox = get_artist_bbox(
+                        obj=text_obj, transform_to=ax, renderer=renderer
+                    )
+
+                    # Refine down in small steps until the desired fit is met
+                    # or we hit the per-cell floor.
+                    while (
+                        current_font_size > min_font_size
+                        and text_bbox.width > desired_width
+                    ):
+                        current_font_size -= 0.2
+                        text_obj.set_fontsize(current_font_size)
+                        text_bbox = get_artist_bbox(
+                            obj=text_obj, transform_to=ax, renderer=renderer
+                        )
+
+                    if text_bbox.width > target_inner_width:
+                        text_obj.set_clip_path(rect)
+
         if tc.clip:
             text_obj.set_clip_path(rect)
 
@@ -1855,6 +1987,7 @@ def _render_header_row(
     segments_by_style: dict[tuple[str, float], list[list[tuple[float, float]]]],
     is_first_row: bool = False,
     is_last_row: bool = False,
+    renderer: Optional[RendererBase] = None,
 ) -> None:
     """
     Render the header row of the table if headers are enabled.
@@ -1911,6 +2044,8 @@ def _render_header_row(
         segments_by_style=segments_by_style,
         is_first_row=is_first_row,
         is_last_row=is_last_row,
+        renderer=renderer,
+        allow_shrink_to_fit=False,
     )
 
 
@@ -1927,6 +2062,7 @@ def _render_detail_row(
     is_even_row: bool,
     is_first_row: bool = False,
     is_last_row: bool = False,
+    renderer: Optional[RendererBase] = None,
 ) -> None:
     """
     Render a single detail (data) row.
@@ -1987,6 +2123,8 @@ def _render_detail_row(
         segments_by_style=segments_by_style,
         is_first_row=is_first_row,
         is_last_row=is_last_row,
+        renderer=renderer,
+        allow_shrink_to_fit=True,
     )
 
 
@@ -2110,15 +2248,72 @@ def render_table(
                 c.width = max_col_width
 
     total_w = sum(c.width for c in table.columns.values())
+    pre_cap_total_w = total_w
+    capped_width_removed = 0.0
 
-    for c in table.columns.values():
-        if c.max_proportional_width is not None:
-            if c.max_proportional_width != 1.0:
-                width_adjustment = c.width - min(
-                    c.width, total_w * c.max_proportional_width
-                )
-                c.width -= width_adjustment
-                total_w += width_adjustment
+    # Compute available horizontal budget once and only enforce proportional
+    # caps when measured content overflows that budget.
+    ax_width = get_artist_bbox(obj=ax, transform_to=ax, renderer=renderer).width
+    available_left = max(table.mid_x - table_left_padding_fraction, 0.0)
+    available_right = max(
+        ax_width - table.mid_x - table_right_padding_fraction,
+        0.0,
+    )
+    available_total = available_left + available_right
+
+    if total_w > available_total:
+        for c in table.columns.values():
+            if c.max_proportional_width is not None:
+                if c.max_proportional_width != 1.0:
+                    width_adjustment = c.width - min(
+                        c.width, pre_cap_total_w * c.max_proportional_width
+                    )
+                    c.width -= width_adjustment
+                    # Width was removed from this column, so total table width
+                    # must decrease accordingly.
+                    total_w -= width_adjustment
+                    capped_width_removed += width_adjustment
+
+    # Keep compact tables compact: if proportional caps shrink one column,
+    # first try to reallocate that removed width to other expandable columns
+    # within the table's original footprint (instead of stretching to axis).
+    if capped_width_removed > 0.0:
+        remaining = capped_width_removed
+        eps = 1e-12
+        expandable_cols = [
+            tc for tc in table.columns.values() if tc.include_in_column_expansion
+        ]
+
+        while remaining > eps and len(expandable_cols) > 0:
+            addl_per_col = remaining / len(expandable_cols)
+            consumed = 0.0
+            next_expandable_cols: list[TableColumn] = []
+
+            for tc in expandable_cols:
+                addl = addl_per_col
+
+                if tc.max_proportional_width is not None:
+                    max_allowed = pre_cap_total_w * tc.max_proportional_width
+                    addl = min(addl, max(0.0, max_allowed - tc.width))
+
+                if addl > 0.0:
+                    tc.width += addl
+                    consumed += addl
+
+                if tc.max_proportional_width is None:
+                    next_expandable_cols.append(tc)
+                else:
+                    max_allowed = pre_cap_total_w * tc.max_proportional_width
+                    if (max_allowed - tc.width) > eps:
+                        next_expandable_cols.append(tc)
+
+            if consumed <= eps:
+                break
+
+            remaining -= consumed
+            expandable_cols = next_expandable_cols
+
+        total_w = sum(c.width for c in table.columns.values())
 
     if table.use_full_axis_width:
         remaining_width = (
@@ -2162,13 +2357,6 @@ def render_table(
 
     # Prevent horizontal overflow by proportionally shrinking all column widths.
     # This keeps wide tables (e.g., many anomaly context columns) inside margins.
-    ax_width = get_artist_bbox(obj=ax, transform_to=ax, renderer=renderer).width
-    available_left = max(table.mid_x - table_left_padding_fraction, 0.0)
-    available_right = max(
-        ax_width - table.mid_x - table_right_padding_fraction,
-        0.0,
-    )
-
     scale_left = available_left / left_w if left_w > 0.0 else 1.0
     scale_right = available_right / right_w if right_w > 0.0 else 1.0
     width_scale = min(1.0, scale_left, scale_right)
@@ -2327,10 +2515,13 @@ def render_table_from_page_layout(
     """
     segments_by_style = {}  # Key: (color, width), Value: List of segments
     table = table_layout.table
+    canvas: Any = pdf_page.fig.canvas
+    renderer = canvas.get_renderer()
 
     if using_axis is not None:
         ax = using_axis
-        # Calculate scale and use translated center point
+        # Re-scale widths to the target axis so measured detail widths from
+        # dry-run remain valid in side-by-side and continuation layouts.
         width_scale, _ = table_layout.scale_to_axis(ax=using_axis)
 
         if adjust_mid_x:
@@ -2373,6 +2564,10 @@ def render_table_from_page_layout(
             ax_pos = ax.get_position()
             ax = pdf_page.fig.add_axes(ax_pos.bounds)
             ax.axis("off")
+            # Continuation pages use a new figure/canvas; refresh renderer so
+            # shrink-to-fit measurements are computed in the correct context.
+            canvas = pdf_page.fig.canvas
+            renderer = canvas.get_renderer()
 
         is_first_page = False
         page.calc_scaled_rect(
@@ -2406,6 +2601,7 @@ def render_table_from_page_layout(
                 segments_by_style=segments_by_style,
                 is_first_row=is_first_row,
                 is_last_row=is_last_row,
+                renderer=renderer,
             )
             y_pos -= row_height
             is_first_row = False
@@ -2431,6 +2627,7 @@ def render_table_from_page_layout(
                 is_even_row=is_even_row,
                 is_first_row=is_first_row,
                 is_last_row=is_last_row,
+                renderer=renderer,
             )
             y_pos -= row_height
             is_first_row = False
