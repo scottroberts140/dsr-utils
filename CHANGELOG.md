@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.3] - 2026-05-09
+
+### Fixed
+
+* **Shrink-to-Fit False Positives**: Table detail cells now reduce font size only when measured text actually overflows the usable cell width, instead of shrinking values that already fit.
+* **Numeric Column Alignment Stability**: Right-aligned numeric values in compact PDF tables now keep a consistent point size when the column has adequate width, preventing visually uneven digit baselines.
+
 ## [1.7.2] - 2026-05-06
 
 ### Added

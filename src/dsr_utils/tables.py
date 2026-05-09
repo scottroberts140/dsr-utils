@@ -1922,20 +1922,15 @@ def _render_row(
                 text_bbox = get_artist_bbox(
                     obj=text_obj, transform_to=ax, renderer=renderer
                 )
-                # Deterministic fit: if the measured text exceeds available
-                # width, directly compute a reduced font size from width ratio.
-                target_fit_ratio = 0.90
-                desired_width = target_inner_width * target_fit_ratio
-
                 if (
                     target_inner_width > 0.0
                     and text_bbox.width > 0.0
-                    and text_bbox.width > desired_width
+                    and text_bbox.width > target_inner_width
                 ):
                     start_font_size = float(text_obj.get_fontsize())
                     min_font_size = max(4.0, start_font_size - 5.0)
 
-                    scale = desired_width / text_bbox.width
+                    scale = target_inner_width / text_bbox.width
                     current_font_size = min(
                         start_font_size,
                         max(min_font_size, start_font_size * scale),
@@ -1949,7 +1944,7 @@ def _render_row(
                     # or we hit the per-cell floor.
                     while (
                         current_font_size > min_font_size
-                        and text_bbox.width > desired_width
+                        and text_bbox.width > target_inner_width
                     ):
                         current_font_size -= 0.2
                         text_obj.set_fontsize(current_font_size)

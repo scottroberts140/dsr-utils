@@ -7,7 +7,7 @@
 
 Utility functions and helpers for common data science tasks, including datetime parsing, formatting, tables, and plotting helpers.
 
-**Version 1.7.2**: Added deterministic cell-level shrink-to-fit and border-safe edge rendering for compact, multi-page table layouts.
+**Version 1.7.3**: Refines table shrink-to-fit so text is reduced only on actual overflow, preserving full-size numeric alignment in PDF tables that already have enough horizontal room.
 
 ## Features
 
@@ -16,6 +16,7 @@ Utility functions and helpers for common data science tasks, including datetime 
 - **Table helpers**: High-precision layout engine with pagination support.
 - **Wide-table auto-fit**: Oversized table layouts are proportionally scaled to stay within canvas/page margins.
 - **Cell shrink-to-fit**: Detail-cell text automatically scales down when measured content would exceed available inner width.
+- **Overflow-only text reduction**: Near-full-width values that already fit inside a cell now retain the base font size instead of being reduced prematurely.
 - **Border-safe rendering**: Outer table borders remain visible even when layouts land near axis boundaries.
 - **Matplotlib helpers**: Headless-friendly bounding box and renderer utilities.
 - **String utilities**: Recursive case conversion (snake, pascal, camel, etc.).
